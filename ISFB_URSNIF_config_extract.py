@@ -2,7 +2,7 @@ import struct
 import malduck
 import re
 
-FILE_PATH = 'filename'
+FILE_PATH = 'PATH_TO_FILE'
 
 data = open(FILE_PATH, 'rb').read()
 
