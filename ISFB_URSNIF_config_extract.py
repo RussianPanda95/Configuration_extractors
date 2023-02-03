@@ -46,3 +46,5 @@ for i in range(len(jj_structure)):
 
     blob_offset = struct.unpack("<I", jj_structure[i][12:16])[0] - 8704
     blob_size = struct.unpack("<I", jj_structure[i][16:20])[0]
+    
+    
