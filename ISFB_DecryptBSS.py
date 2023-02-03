@@ -1,4 +1,5 @@
 # reference: https://www.0ffset.net/reverse-engineering/challenge-1-gozi-string-crypto/
+
 import pefile 
 import struct
 
