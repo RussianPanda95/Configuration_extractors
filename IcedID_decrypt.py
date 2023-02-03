@@ -2,7 +2,6 @@ import pefile
 import argparse
 import struct
 
-
 parser = argparse.ArgumentParser()
 parser.add_argument("-f", "--file", help="path of the binary file")
 args = parser.parse_args()
