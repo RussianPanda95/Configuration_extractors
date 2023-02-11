@@ -1,6 +1,5 @@
 from dotnetfile import DotNetPE
 from Crypto.Cipher import AES
-import binascii
 from backports.pbkdf2 import pbkdf2_hmac
 from base64 import b64decode
 import re
