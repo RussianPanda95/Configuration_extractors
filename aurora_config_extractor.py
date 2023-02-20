@@ -4,6 +4,7 @@ import json
 import argparse
 
 # Reference: Borrowed a nice regex pattern to grab the IPs from OALabs https://research.openanalysis.net/golang/titan/stealer/python/research/ida/goresym/alphagolang/2022/12/01/titan_stealer.html :P 
+# Aurora Stealer uses 8081 for the C2 port, it cannot be customized
 pattern_c2 = rb'(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\:8081'
  
 patterns = [
