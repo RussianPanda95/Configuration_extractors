@@ -5,8 +5,8 @@ import argparse
 
 # Reference: Borrowed a nice regex pattern to grab the IPs from OALabs https://research.openanalysis.net/golang/titan/stealer/python/research/ida/goresym/alphagolang/2022/12/01/titan_stealer.html :P 
 
-pattern_c2 = rb'(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\:8081'
- 
+pattern_c2 = rb'(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)'
+
 patterns = [
     rb'[A-Za-z0-9+/]{4}(?:[A-Za-z0-9+/]{4})*(?=[0-9]+)',
     rb'(?:[A-Za-z0-9+/]{4}){2,}(?:[A-Za-z0-9+/]{2}[AEIMQUYcgkosw048]=|[A-Za-z0-9+/][AQgw]==)'
