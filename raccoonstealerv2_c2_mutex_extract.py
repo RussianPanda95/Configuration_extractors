@@ -47,7 +47,7 @@ mutex = None
 enc_strings = []
 for m in re.finditer(pattern, text_data):
     str_len = struct.unpack('B', m.group(1))[0]
-    str_vaddr = struct.unpack('<I', m.group(3))[0]
+    str = struct.unpack('<I', m.group(3))[0]
     enc_str = struct.unpack('<I', m.group(2))[0]
     
     # Retrieving the encoded string
@@ -58,8 +58,8 @@ for m in re.finditer(pattern, text_data):
             print(f"Encoded string: {enc_str_strip}")
 
     # Retrieving the XOR key
-    if rdata_start <= str_vaddr <= rdata_end and str_len == 0x40:
-        key = pe.get_data(str_vaddr - pe.OPTIONAL_HEADER.ImageBase, str_len)
+    if rdata_start <= str <= rdata_end and str_len == 0x40:
+        key = pe.get_data(str - pe.OPTIONAL_HEADER.ImageBase, str_len)
         break
 
 decrypt_me = xor_decrypt(enc_str_strip, key)
