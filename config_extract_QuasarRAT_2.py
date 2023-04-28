@@ -34,7 +34,6 @@ for value in data:
 key_enc = matches[6]
 key_enc = bytes(key_enc, 'utf-8')
 key = pbkdf2_hmac("sha1", key_enc, salt, 50000, 32)
-b64_values = ['Version','Hosts','Subdirectory', 'InstallName', 'Mutex', 'StartupKey', 'TAG','LOGDIRECTORYNAME']
 value_decode_list = []
 for value in matches:
     if re.search(base64_pattern, value):
