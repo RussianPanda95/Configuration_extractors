@@ -1,6 +1,6 @@
 ### Configuration_extractors
 
-Vidar Stealer:
+#### Vidar Stealer:
 
 The configuration extractor was tested on the following samples:
 37c74886ce85682039bced4a6423e233aebd962921d9a76008d19ff75483a52c
