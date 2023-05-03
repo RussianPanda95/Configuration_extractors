@@ -1,4 +1,4 @@
-# Configuration_extractors
+### Configuration_extractors
 
 Vidar Stealer:
 
