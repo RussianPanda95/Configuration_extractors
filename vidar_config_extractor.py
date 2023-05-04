@@ -7,7 +7,6 @@
 # ed28af0855aa6e00776f3633c15663e4a930f54ac399b48369f485e31250849b
 # b30bdc75d85cac464fcc59df6a1db4c7ca19c93c2b42db961b41fd814c230d80
 # 505e21494deb4e828da8bdfa386fa59a2599f89dc87276f25bd6d923aed13f83
-# 279fff770c6678a1839799bd83aa9ace0c78380b9f93bd4b4a689c245382b4e6
 # eba331ce626b9c6ca338c439b608d5234bfd0d0d5408de9e8b64e131435e4216
 
 import re
@@ -93,7 +92,7 @@ try:
             version = result
     print(f"Version: {version}")
  
-# Look for the version in ".rdata"
+# Look for the version in ".rdata", NOTE: this might produce FP results
 except:
     version = []
     for m in re.finditer(rb'\b\d+\.\d+\b', rdata_data):
