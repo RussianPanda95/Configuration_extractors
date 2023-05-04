@@ -14,6 +14,8 @@ import re
 import struct
 import pefile
 import argparse
+import requests
+
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-f", "--file", help="path of the binary file")
@@ -34,6 +36,19 @@ for m in re.finditer(rb'(https?://[\d\w\.:/?#&+=_-]+)', rdata_data):
         c2.append(matches)
 
 print(f"C2: {', '.join(c2)}")
+
+# Retrieving C2 within the dead drops
+for url in c2:
+    response = requests.get(url)
+
+    ip_pattern = r"(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)[^\|]*"
+    ip_addresses = set(re.findall(ip_pattern, response.content.decode()))
+
+    if len(ip_addresses) > 0:
+        for ip in ip_addresses:
+            print(f"C2: {ip}")
+    else:
+        print(f"Did not find any C2 in {url}.")
 
 for s in pe.sections:
     if s.Name.startswith(b'.rdata'):
@@ -69,7 +84,6 @@ try:
             results.append(enc_str)
 
     version = None
-    c2 = []
     for result in results:
         if '.' in result and version is None:
             version = result
