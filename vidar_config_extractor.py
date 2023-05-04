@@ -39,7 +39,11 @@ print(f"C2: {', '.join(c2)}")
 
 # Retrieving C2 within the dead drops
 for url in c2:
-    response = requests.get(url)
+    try:
+        response = requests.get(url, timeout=3)
+    except Timeout:
+        print(f"Timed out while connecting to {url}")
+        continue
 
     ip_pattern = r"(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)[^\|]*"
     ip_addresses = set(re.findall(ip_pattern, response.content.decode()))
