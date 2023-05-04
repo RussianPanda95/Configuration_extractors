@@ -92,7 +92,7 @@ try:
             version = result
     print(f"Version: {version}")
  
-# Look for the version in ".rdata", NOTE: this might produce FP results
+# Look for the version in ".rdata" if there are no xrefs. NOTE: this might produce FP results
 except:
     version = []
     for m in re.finditer(rb'\b\d+\.\d+\b', rdata_data):
