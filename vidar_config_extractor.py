@@ -65,10 +65,8 @@ try:
         else:
             enc_str = struct.unpack('<I', m.group(3))[0]
         if rdata_start <= enc_str <= rdata_end:
-            enc_str = pe.get_data(enc_str - pe.OPTIONAL_HEADER.ImageBase, 50)
-            # Splits the strings at the null byte and takes the first part
-            string = enc_str.decode().split('\0')[0]
-            results.append(string)
+            enc_str = pe.get_string_at_rva(enc_str - pe.OPTIONAL_HEADER.ImageBase, 50)
+            results.append(enc_str)
 
     version = None
     c2 = []
