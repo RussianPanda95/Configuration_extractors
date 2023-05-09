@@ -15,16 +15,16 @@ pe = pefile.PE(args.file)
 
 for s in pe.sections:
     if s.SizeOfRawData > 256:
-        rdata_start = s.VirtualAddress + pe.OPTIONAL_HEADER.ImageBase
-        rdata_end = rdata_start + s.Misc_VirtualSize
-        rdata_data = s.get_data()
+        data_start = s.VirtualAddress + pe.OPTIONAL_HEADER.ImageBase
+        data_end = data_start + s.Misc_VirtualSize
+        data = s.get_data()
 
 bytes = bytearray()
 
 for i in range(32):
-    bytes.append(rdata_data[i] ^ rdata_data[i+64])
+    bytes.append(data[i] ^ data[i+64])
 
-key = rdata_data[:32].hex()
+key = data[:32].hex()
 campaign_id = struct.unpack("<I", bytes[:4])[0]
 c2 = bytes[4:].split(b'\x00')[0].decode()
 print(f"C2: {c2}")
