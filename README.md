@@ -22,3 +22,11 @@ fd37c98782453214bab6484f6045b796a5a3dc7ebba9a894f6783817eef6c9c7
 dd651c2ffe94faf59e3a3db2da56e05a1a12fcae7cd5f87881d1cb036be3ec2a*
 
 All samples can be found on https://www.unpac.me/ 
+
+#### DynamicRAT:
+
+The configuration extractor was tested on the following samples:
+
+*a7eeab7e2e90d0373ebfb15243bff81a
+afdb44fb193de084ecccdf3a1402f4df
+df63d9e76da54614bf22613fca437b04*
