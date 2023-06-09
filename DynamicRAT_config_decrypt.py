@@ -12,7 +12,7 @@ from Crypto.Cipher import AES
 
 file_path = input("Enter the file path: ")
 
-jar_file_path = file_path  # Assuming the JAR file path is the same as the input file path
+jar_file_path = file_path  
 assets_file_path = "assets.dat"
 
 class_file = 'dynamic/client/Main.class'
@@ -20,13 +20,13 @@ search_pattern = rb"assets\.dat.{8}([A-Za-z0-9!@#$%^&*()-_=+{}\[\]|:;'<>,./?]+)"
 
 with zipfile.ZipFile(jar_file_path, 'r') as jar:
     try:
-        # Extract the "Main.class" file contents as bytes
+        # Extract the "Main.class" file contents
         file_bytes = jar.read(class_file)
     except KeyError:
         print(f"The file '{class_file}' does not exist in the JAR file.")
         exit(1)
 
-    # Find the mention of "assets.dat" and extract the desired string
+    # Extract the key
     match = re.search(search_pattern, file_bytes)
     if match:
         extracted_bytes = match.group(1)
