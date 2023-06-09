@@ -37,7 +37,6 @@ with zipfile.ZipFile(jar_file_path, 'r') as jar:
 
 key = hashlib.md5(extracted_key.encode("utf-8")).digest()
 
-
 with zipfile.ZipFile(jar_file_path, 'r') as jar:
     try:
         # Extract the "assets.dat" file contents as bytes
