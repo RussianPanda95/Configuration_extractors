@@ -1,8 +1,8 @@
 # Author: RussianPanda
 # Tested on samples:
-# a7eeab7e2e90d0373ebfb15243bff81a
-# afdb44fb193de084ecccdf3a1402f4df
-# df63d9e76da54614bf22613fca437b04
+#41a037f09bf41b5cb1ca453289e6ca961d61cd96eeefb1b5bbf153612396d919
+#856a3df5b1930c1fcd5fdce56624f6f26a7e829ea331a182b4a28fd2707436f1
+#b2a3112be417feb4f7c3b3f0385bdaee9213bf9cdc82136c05ebebb835c19a65
 
 import hashlib
 import binascii
