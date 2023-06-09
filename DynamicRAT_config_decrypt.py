@@ -4,21 +4,49 @@
 #856a3df5b1930c1fcd5fdce56624f6f26a7e829ea331a182b4a28fd2707436f1
 #b2a3112be417feb4f7c3b3f0385bdaee9213bf9cdc82136c05ebebb835c19a65
 
+import zipfile
+import re
 import hashlib
 import binascii
 from Crypto.Cipher import AES
 
 file_path = input("Enter the file path: ")
-password = input("Enter the password: ")
 
-md5_hash = hashlib.md5(password.encode("utf-8")).digest()
+jar_file_path = file_path  # Assuming the JAR file path is the same as the input file path
+assets_file_path = "assets.dat"
+
+class_file = 'dynamic/client/Main.class'
+search_pattern = rb"assets\.dat.{8}([A-Za-z0-9!@#$%^&*()-_=+{}\[\]|:;'<>,./?]+)"
+
+with zipfile.ZipFile(jar_file_path, 'r') as jar:
+    try:
+        # Extract the "Main.class" file contents as bytes
+        file_bytes = jar.read(class_file)
+    except KeyError:
+        print(f"The file '{class_file}' does not exist in the JAR file.")
+        exit(1)
+
+    # Find the mention of "assets.dat" and extract the desired string
+    match = re.search(search_pattern, file_bytes)
+    if match:
+        extracted_bytes = match.group(1)
+        extracted_key = extracted_bytes.decode('utf-8')
+        print(f"Extracted key: {extracted_key}")
+    else:
+        print("Key not found in the file.")
+
+md5_hash = hashlib.md5(extracted_key.encode("utf-8")).digest()
 
 key = binascii.hexlify(md5_hash).decode("utf-8")
 key_bytes = [int(key[i:i+2], 16) for i in range(0, len(key), 2)]
 
-with open(file_path, "rb") as file:
-    file.seek(4)  # Skip the first four bytes
-    encrypted_data_bytes = file.read()
+with zipfile.ZipFile(jar_file_path, 'r') as jar:
+    try:
+        # Extract the "assets.dat" file contents as bytes
+        encrypted_data_bytes = jar.read(assets_file_path)[4:]  # Skip the first four bytes
+    except KeyError:
+        print(f"The file '{assets_file_path}' does not exist in the JAR file.")
+        exit(1)
 
 key = bytes(key_bytes)
 encrypted_data = bytes(encrypted_data_bytes)
