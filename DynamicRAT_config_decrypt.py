@@ -42,7 +42,7 @@ key_bytes = [int(key[i:i+2], 16) for i in range(0, len(key), 2)]
 
 with zipfile.ZipFile(jar_file_path, 'r') as jar:
     try:
-        # Extract the "assets.dat" file contents as bytes
+        # Extract the "assets.dat" file  
         encrypted_data_bytes = jar.read(assets_file_path)[4:]  # Skip the first four bytes
     except KeyError:
         print(f"The file '{assets_file_path}' does not exist in the JAR file.")
