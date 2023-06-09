@@ -12,7 +12,7 @@ from Crypto.Cipher import AES
 
 file_path = input("Enter the file path: ")
 
-jar_file_path = file_path  
+jar_file_path = file_path  # Assuming the JAR file path is the same as the input file path
 assets_file_path = "assets.dat"
 
 class_file = 'dynamic/client/Main.class'
@@ -20,13 +20,13 @@ search_pattern = rb"assets\.dat.{8}([A-Za-z0-9!@#$%^&*()-_=+{}\[\]|:;'<>,./?]+)"
 
 with zipfile.ZipFile(jar_file_path, 'r') as jar:
     try:
-        # Extract the "Main.class" file contents
+        # Extract the "Main.class" file contents as bytes
         file_bytes = jar.read(class_file)
     except KeyError:
         print(f"The file '{class_file}' does not exist in the JAR file.")
         exit(1)
 
-    # Extract the key
+    # Find the mention of "assets.dat" and extract the desired string
     match = re.search(search_pattern, file_bytes)
     if match:
         extracted_bytes = match.group(1)
@@ -35,20 +35,17 @@ with zipfile.ZipFile(jar_file_path, 'r') as jar:
     else:
         print("Key not found in the file.")
 
-md5_hash = hashlib.md5(extracted_key.encode("utf-8")).digest()
+key = hashlib.md5(extracted_key.encode("utf-8")).digest()
 
-key = binascii.hexlify(md5_hash).decode("utf-8")
-key_bytes = [int(key[i:i+2], 16) for i in range(0, len(key), 2)]
 
 with zipfile.ZipFile(jar_file_path, 'r') as jar:
     try:
-        # Extract the "assets.dat" file  
+        # Extract the "assets.dat" file contents as bytes
         encrypted_data_bytes = jar.read(assets_file_path)[4:]  # Skip the first four bytes
     except KeyError:
         print(f"The file '{assets_file_path}' does not exist in the JAR file.")
         exit(1)
 
-key = bytes(key_bytes)
 encrypted_data = bytes(encrypted_data_bytes)
 
 cipher = AES.new(key, AES.MODE_ECB)
@@ -56,3 +53,4 @@ cipher = AES.new(key, AES.MODE_ECB)
 decrypted_data = cipher.decrypt(encrypted_data)
 
 print("Decrypted data:", decrypted_data)
+
