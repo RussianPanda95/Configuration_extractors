@@ -28,7 +28,5 @@ All samples can be found on https://www.unpac.me/
 The configuration extractor was tested on the following samples:
 
 *a7eeab7e2e90d0373ebfb15243bff81a
-
 afdb44fb193de084ecccdf3a1402f4df
-
 df63d9e76da54614bf22613fca437b04*
