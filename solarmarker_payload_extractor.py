@@ -73,12 +73,12 @@ iv_match = re.search(iv_pattern, content)
 if key_match:
     key = key_match.group(1)
     key_bytes = bytes([int(x) for x in key.split(',')])
-    print('Key: ', key_bytes)
+    print('Key:', key)
 
 if iv_match:
     iv = iv_match.group(1)
     iv_bytes = bytes([int(x) for x in iv.split(',')])
-    print('IV: ', iv_bytes)
+    print('IV:', iv)
 
 for i, b64_str in enumerate(base64_payload):
     try:
