@@ -1,9 +1,9 @@
 # Author: RussianPanda
 # Reference: https://perception-point.io/blog/behind-the-attack-remcos-rat/
 # Tested on samples:
-# 79c83fbfb0df473a9c39da92c37f1457
-# 23fd189553e4730f972c2f5110820080
-# 137f21d1f8fdd5cfe86637368b526027
+# 536d16dd4765a7637cd37859010639c1fe776598f3c9c97cb3ea41e2ad2d6d6b
+# 94a4e5c7a3524175c0306c5748c719a940a7bfbe778c5a16627193a684fa10f0
+# 8b6a909110ca907eb279cfb8f6db432af5564263e49c6982001b83fcffe04c07*
 
 import pefile
 import string
