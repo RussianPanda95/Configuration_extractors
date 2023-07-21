@@ -15,12 +15,10 @@ def rc4_decrypt(key, encrypted_data):
     j = 0
     out = []
 
-    # KSA 
     for i in range(256):
         j = (j + S[i] + key[i % len(key)]) % 256
         S[i], S[j] = S[j], S[i]
-
-    # PRGA 
+        
     i = j = 0
     for byte in encrypted_data:
         i = (i + 1) % 256
