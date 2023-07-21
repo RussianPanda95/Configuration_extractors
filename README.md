@@ -30,3 +30,13 @@ The configuration extractor was tested on the following samples:
 *41a037f09bf41b5cb1ca453289e6ca961d61cd96eeefb1b5bbf153612396d919
 856a3df5b1930c1fcd5fdce56624f6f26a7e829ea331a182b4a28fd2707436f1
 b2a3112be417feb4f7c3b3f0385bdaee9213bf9cdc82136c05ebebb835c19a65*
+
+
+#### RemcosRAT:
+
+The configuration extractor was tested on the following samples:
+
+*536d16dd4765a7637cd37859010639c1fe776598f3c9c97cb3ea41e2ad2d6d6b
+94a4e5c7a3524175c0306c5748c719a940a7bfbe778c5a16627193a684fa10f0
+8b6a909110ca907eb279cfb8f6db432af5564263e49c6982001b83fcffe04c07*
+
