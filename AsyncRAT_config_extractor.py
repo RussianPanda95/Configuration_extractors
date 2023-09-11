@@ -1,3 +1,5 @@
+# Author: RussianPanda
+
 from dotnetfile import DotNetPE
 from Crypto.Cipher import AES
 from backports.pbkdf2 import pbkdf2_hmac
@@ -32,7 +34,8 @@ data = dotnet_file.get_user_stream_strings()
 
 		// Token: 0x04000048 RID: 72
 		private const int HmacSha256Length = 32; '''
-        
+
+
 b64dec = data[1:2][0]
 b64dec = b64decode(b64dec)
 key_enc = data[7:8][0]
@@ -45,7 +48,7 @@ iv = b64dec[32:48]
 # look for base64 pattern
 base64_pattern = r"^(?=.{20,})(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$"
 
-b64_values = ['Ports','Hosts','Version','Install','Key','MTX','Certificate', 'ServerSignature', 'Anti', 'offlineKL', 'clipper','btc', 'eth','tron', 'Pastebin','BDOS', 'Group']
+b64_values = ['Ports','Hosts','Version','Install','Key','MTX','Certificate', 'ServerSignature', 'Anti', 'Pastebin', 'BDOS', 'Group']
 other_list = ["InstallFolder", "InstallFile", "Delay", "Hwid"]
 
 value_strings = []
@@ -55,11 +58,13 @@ counter = 0
 for value in data:
     if re.search(base64_pattern, value):
         value_decode = b64decode(value)
+        
         value_decrypt = decrypt_AES(value_decode, dec_key, iv)
         value_strip = value_decrypt[48:]
         value_strip = value_strip.decode()
         value_strip = re.sub(r'[^a-zA-Z0-9 _.,|]+', '', value_strip) 
         value_strings.append(value_strip)
+        
     else:
         counter += 1
         if 2 <= counter <= 5:
