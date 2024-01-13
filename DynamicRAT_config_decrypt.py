@@ -16,7 +16,7 @@ jar_file_path = file_path  # Assuming the JAR file path is the same as the input
 assets_file_path = "assets.dat"
 
 class_file = 'dynamic/client/Main.class'
-search_pattern = rb"assets\.dat.{8}([A-Za-z0-9!@#$%^&*()-_=+{}\[\]|:;'<>,./?]+)"
+search_pattern = rb"assets\.dat.{8}([A-Za-z0-9!@#$%^&*()\-_=+{}\[\]|:;'\"<>,./?]+)"
 
 with zipfile.ZipFile(jar_file_path, 'r') as jar:
     try:
@@ -27,7 +27,7 @@ with zipfile.ZipFile(jar_file_path, 'r') as jar:
         exit(1)
 
     # Find the mention of "assets.dat" and extract the desired string
-    match = re.search(search_pattern, file_bytes)
+    match = re.search(search_pattern, file_bytes, flags=re.DOTALL)
     if match:
         extracted_bytes = match.group(1)
         extracted_key = extracted_bytes.decode('utf-8')
