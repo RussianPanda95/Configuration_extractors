@@ -2,7 +2,7 @@ import base64
 import json
 import re
 from sys import argv
-from typing import BinaryIO, List
+from typing import BinaryIO, List, Optional
 
 from maco.extractor import Extractor
 from maco.model import ConnUsageEnum, ExtractorModel
@@ -42,7 +42,7 @@ rule  AuroraStealer {
 }
 """
 
-    def run(self, stream: BinaryIO, matches: List = []) -> ExtractorModel:
+    def run(self, stream: BinaryIO, matches: List = []) -> Optional[ExtractorModel]:
         data = stream.read()
 
         matches = []
@@ -153,4 +153,8 @@ if __name__ == "__main__":
     file_path = argv[1]
 
     with open(file_path, "rb") as f:
-        print(parser.run(f).model_dump_json(indent=2, exclude_none=True, exclude_defaults=True))
+        result = parser.run(f)
+        if result:
+            print(result.model_dump_json(indent=2, exclude_none=True, exclude_defaults=True))
+        else:
+            print("No configuration extracted")

@@ -5,7 +5,7 @@ import re
 from base64 import b64decode
 from sys import argv
 from tempfile import NamedTemporaryFile
-from typing import BinaryIO, List
+from typing import BinaryIO, List, Optional
 
 from backports.pbkdf2 import pbkdf2_hmac
 from Crypto.Cipher import AES
@@ -76,7 +76,7 @@ class AsyncRAT(Extractor):
 }
 """
 
-    def run(self, stream: BinaryIO, matches: List = []):
+    def run(self, stream: BinaryIO, matches: List = []) -> Optional[ExtractorModel]:
         with NamedTemporaryFile() as file:
             file.write(stream.read())
             file.flush()
@@ -182,4 +182,8 @@ if __name__ == "__main__":
     file_path = argv[1]
 
     with open(file_path, "rb") as f:
-        print(parser.run(f).model_dump_json(indent=2, exclude_none=True, exclude_defaults=True))
+        result = parser.run(f)
+        if result:
+            print(result.model_dump_json(indent=2, exclude_none=True, exclude_defaults=True))
+        else:
+            print("No configuration extracted")

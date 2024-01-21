@@ -10,7 +10,7 @@ from typing import BinaryIO, List, Optional
 
 import pefile
 from maco.extractor import Extractor
-from maco.model import ExtractorModel
+from maco.model import ExtractorModel, ConnUsageEnum
 
 # Mapping from https://github.com/telekom-security/malware_analysis/blob/main/darkgate/extractor.py
 CONFIG_FLAG_MAPPING = {
@@ -98,7 +98,7 @@ rule DarkGate {
     }
     """
 
-    def run(self, stream: BinaryIO, matches: List = []) -> ExtractorModel:
+    def run(self, stream: BinaryIO, matches: List = []) -> Optional[ExtractorModel]:
         base64_pattern_64 = re.compile(b"[A-Za-z0-9+/=]{64}")
         base64_pattern_any = re.compile(b"[A-Za-z0-9+/=]+")
 
@@ -157,7 +157,7 @@ rule DarkGate {
             c2_port = config.pop("c2_port")
             for url in http_results.values():
                 url = url.replace("|", "")
-                cfg.http.append(cfg.Http(uri=f"{url}:{c2_port}"))
+                cfg.http.append(cfg.Http(uri=f"{url}:{c2_port}", usage=ConnUsageEnum.c2))
             cfg.other = {"config_flags": config}
         return cfg
 
@@ -167,4 +167,8 @@ if __name__ == "__main__":
     file_path = sys.argv[1]
 
     with open(file_path, "rb") as f:
-        print(parser.run(f).model_dump_json(indent=2, exclude_none=True, exclude_defaults=True))
+        result = parser.run(f)
+        if result:
+            print(result.model_dump_json(indent=2, exclude_none=True, exclude_defaults=True))
+        else:
+            print("No configuration extracted")

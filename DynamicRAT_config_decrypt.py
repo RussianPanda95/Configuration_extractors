@@ -29,7 +29,7 @@ class DynamicRAT(Extractor):
     sharing: str = "TLP:CLEAR"
     reference: str = "https://gi7w0rm.medium.com/dynamicrat-a-full-fledged-java-rat-1a2dabb11694"
 
-    def run(self, stream: BinaryIO, matches: List = []) -> ExtractorModel:
+    def run(self, stream: BinaryIO, matches: List = []) -> Optional[ExtractorModel]:
         with zipfile.ZipFile(stream, "r") as jar:
             try:
                 # Extract the "Main.class" file contents as bytes
@@ -93,4 +93,8 @@ if __name__ == "__main__":
     file_path = argv[1]
 
     with open(file_path, "rb") as f:
-        print(parser.run(f).model_dump_json(indent=2, exclude_none=True, exclude_defaults=True))
+        result = parser.run(f)
+        if result:
+            print(result.model_dump_json(indent=2, exclude_none=True, exclude_defaults=True))
+        else:
+            print("No configuration extracted")
