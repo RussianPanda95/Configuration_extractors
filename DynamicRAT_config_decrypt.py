@@ -9,7 +9,6 @@ import re
 import zipfile
 from string import printable, whitespace
 from sys import argv
-from tempfile import NamedTemporaryFile
 from typing import BinaryIO, List, Optional
 
 from Crypto.Cipher import AES
