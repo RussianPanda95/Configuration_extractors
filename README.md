@@ -40,3 +40,8 @@ The configuration extractor was tested on the following samples:
 94a4e5c7a3524175c0306c5748c719a940a7bfbe778c5a16627193a684fa10f0
 8b6a909110ca907eb279cfb8f6db432af5564263e49c6982001b83fcffe04c07*
 
+#### DcRAT:
+
+The configuration extractor was tested on the following samples:
+
+*a2766b20b3d09b2eee3a9805cffef7228dc2eab1265a6fbc1e98f67105ae51b9*
