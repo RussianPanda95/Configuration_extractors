@@ -152,7 +152,7 @@ rule DarkVNC {
                              tcp=[ExtractorModel.Connection(server_ip=ip,
                                                             server_port=int(port),
                                                             usage=ConnUsageEnum.c2)])
-        print(f"C2: {cleaned_string}")
+        self.logger.info(f"C2: {cleaned_string}")
         return cfg
 
 
