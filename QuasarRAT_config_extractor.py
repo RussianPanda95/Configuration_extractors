@@ -44,7 +44,7 @@ class QuasarRAT(Extractor):
     last_modified = "2024-01-21"
     sharing: str = "TLP:CLEAR"
     yara_rule: str = """
-rule QuasarRAT {
+rule Quasar_RAT {
    meta:
       description = "Detects Quasar RAT"
       license = "Detection Rule License 1.1 https://github.com/Neo23x0/signature-base/blob/master/LICENSE"
@@ -69,7 +69,7 @@ rule QuasarRAT {
       ( uint16(0) == 0x5a4d and filesize < 5000KB and all of ($s*) or all of ($op*) )
 }
 
-rule QuasarRAT_2 {
+rule Quasar_RAT_2 {
    meta:
       description = "Detects Quasar RAT"
       license = "Detection Rule License 1.1 https://github.com/Neo23x0/signature-base/blob/master/LICENSE"
