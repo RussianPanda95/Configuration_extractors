@@ -1,8 +1,11 @@
 import clr
+import os
 import re
 import base64
 
 DNLIB_PATH = 'path_to_dnlib\\dnlib.dll'
+if not os.path.exists(DNLIB_PATH):
+    raise FileNotFoundError(DNLIB_PATH)
 clr.AddReference(DNLIB_PATH)
 
 import dnlib
@@ -35,7 +38,7 @@ last_b64_index = -1
 for i, string in enumerate(extracted_strings):
     if re.match(b64, string) and len(string) % 4 == 0 and len(string) > 20:
         b64_strings.append(string)
-        last_b64_index = i 
+        last_b64_index = i
 
 xor_key_match = None
 if last_b64_index != -1 and last_b64_index + 2 < len(extracted_strings):
@@ -57,7 +60,7 @@ if last_b64_index is not None and last_b64_index + 1 < len(extracted_strings):
         xor_key = xor_key_match.encode() if xor_key_match else None
 
 if xor_key:
-    for string in b64_strings[1:]:  
+    for string in b64_strings[1:]:
         dec_Data = base64.b64decode(string)
         xor_result = xor_data(dec_Data, xor_key)
         try:
@@ -74,7 +77,7 @@ if len(b64_strings) < 3:
 
     if last_b64_index != -1 and last_b64_index + 1 < len(extracted_strings):
         dec_data_another = extracted_strings[last_b64_index + 1]
-  
+
     if last_b64_index != -1 and last_b64_index + 2 < len(extracted_strings):
         xor_key_another = extracted_strings[last_b64_index + 3]
 

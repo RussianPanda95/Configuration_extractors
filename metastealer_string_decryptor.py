@@ -9,6 +9,8 @@ import sys
 
 # Add reference to dnlib.dll
 dnlib_path = "path_to_dnlib"
+if not os.path.exists(dnlib_path):
+    raise FileNotFoundError(dnlib_path)
 clr.AddReference(dnlib_path)
 import dnlib
 from dnlib.DotNet import ModuleDefMD
@@ -76,7 +78,7 @@ def invoke_method_safely(method, params):
     try:
         if method.Name == "Get" and isinstance(params[0], int):
             # Adjust the range as necessary
-            if 0 <= params[0] < 100: 
+            if 0 <= params[0] < 100:
                 return method.Invoke(None, params)
         else:
             return method.Invoke(None, params)
@@ -93,7 +95,7 @@ def extract_parameters(instructions, insn_idx, method):
     num_params = len(method.GetParameters())
     if insn_idx < num_params:
         return []
-    
+
     for i, param_type in enumerate(method.GetParameters()):
         operand = get_operand_value(instructions[insn_idx - 1], str(param_type.ParameterType))
         if operand is not None:
@@ -127,8 +129,8 @@ if __name__ == "__main__":
     suspected_methods = find_decryption_methods(assembly)
     results = invoke_methods(module, suspected_methods)
 
-    C2 = None 
-    Build_ID = None  
+    C2 = None
+    Build_ID = None
 
     for location, decrypted_string in results.items():
         print(f"Decryption Location: {location}, Decrypted String: {decrypted_string}")

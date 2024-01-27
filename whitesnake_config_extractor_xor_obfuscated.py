@@ -5,11 +5,15 @@
 
 import argparse
 import clr
+import os
 
 parser = argparse.ArgumentParser(description='Extract information from a target assembly file.')
 parser.add_argument('-f', '--file', required=True, help='Path to the stealer file')
 parser.add_argument('-d', '--dnlib', required=True, help='Path to the dnlib.dll')
 args = parser.parse_args()
+
+if not os.path.exists(args.dnlib):
+    raise FileNotFoundError(args.dnlib)
 
 clr.AddReference(args.dnlib)
 
