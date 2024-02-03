@@ -4,15 +4,24 @@
 # 008f9352765d1b3360726363e3e179b527a566bc59acecea06bd16eb16b66c5d
 
 import os
-import sys
+from pathlib import Path
+from sys import argv
+from tempfile import NamedTemporaryFile
+from typing import BinaryIO, List, Optional
 
 import clr
+from maco.extractor import Extractor
+from maco.model import ConnUsageEnum, ExtractorModel
 
-# Add reference to dnlib.dll
-dnlib_path = "dnlib.dll"
-if not os.path.exists(dnlib_path):
-    raise FileNotFoundError(dnlib_path)
-clr.AddReference(dnlib_path)
+# Check default location from package install
+dn_lib_found = list(Path("/usr/lib").glob("**/dnlib.dll"))
+DNLIB_PACKAGE_PATH = str(dn_lib_found[0]) if dn_lib_found else "dnlib"
+
+DNLIB_PATH = os.environ.get("DNLIB_PATH", DNLIB_PACKAGE_PATH)
+if not os.path.exists(DNLIB_PATH):
+    raise FileNotFoundError(DNLIB_PATH)
+clr.AddReference(DNLIB_PATH)
+
 import dnlib
 from dnlib.DotNet import ModuleDefMD
 from dnlib.DotNet.Emit import OpCodes
@@ -123,37 +132,82 @@ def invoke_and_process(method, params):
         return None
 
 
+class MetaStealer(Extractor):
+    family = "MetaStealer"
+    author = "@RussianPanda"
+    last_modified = "2024-02-02"
+    sharing: str = "TLP:CLEAR"
+    reference: str = "https://russianpanda.com/2023/11/20/MetaStealer-Redline%27s-Doppelganger/"
+    yara_rule: str = """
+import "pe"
+rule MetaStealer_core_payload {
+
+	meta:
+		author = "RussianPanda"
+		decription = "Detects MetaStealer Core Payload"
+		date = "12/29/2023"
+
+	strings:
+		$s1 = "FileScannerRule"
+		$s2 = "TreeObject"
+		$s3 = "Schema"
+		$s4 = "StringDecrypt"
+		$s5 = "AccountDetails"
+
+	condition:
+		4 of ($s*)
+		and pe.imports("mscoree.dll")
+}
+"""
+
+    def run(self, stream: BinaryIO, matches: List = []) -> Optional[ExtractorModel]:
+        with NamedTemporaryFile() as file:
+            file.write(stream.read())
+            file.flush()
+
+            file_path = file.name
+            module = load_net_module(file_path)
+            assembly = load_net_assembly(file_path)
+            suspected_methods = find_decryption_methods(assembly)
+            results = invoke_methods(module, suspected_methods)
+
+            C2 = None
+            Build_ID = None
+
+            for location, decrypted_string in results.items():
+                self.logger.info(f"Decryption Location: {location}, Decrypted String: {decrypted_string}")
+
+                if location == "Program.ReadLine":
+                    C2 = decrypted_string
+                elif location == "Schema13.TreeObject25":
+                    Build_ID = decrypted_string
+
+            cfg = None
+            if C2 or Build_ID:
+                cfg = ExtractorModel(family=self.family)
+            else:
+                # Nothing found
+                return
+
+            # Print the values of C2 and Build ID if they are found
+            if C2:
+                self.logger.info("-----------------------------------------------------------------------------------")
+                self.logger.info(f"C2: {C2}")
+                cfg.http.append(cfg.Http(uri=C2, usage=ConnUsageEnum.c2))
+            if Build_ID:
+                self.logger.info(f"Build ID: {Build_ID}")
+                cfg.other["Build ID"] = Build_ID
+
+            return cfg
+
+
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        sys.exit("Usage: metastealer_string_decryptor.py <payload>")
+    parser = MetaStealer()
+    file_path = argv[1]
 
-    file_path = sys.argv[1]
-
-    if not os.path.exists(file_path):
-        sys.exit("File not found")
-
-    if not os.path.isabs(file_path):
-        file_path = os.path.abspath(file_path)
-
-    module = load_net_module(file_path)
-    assembly = load_net_assembly(file_path)
-    suspected_methods = find_decryption_methods(assembly)
-    results = invoke_methods(module, suspected_methods)
-
-    C2 = None
-    Build_ID = None
-
-    for location, decrypted_string in results.items():
-        print(f"Decryption Location: {location}, Decrypted String: {decrypted_string}")
-
-        if location == "Program.ReadLine":
-            C2 = decrypted_string
-        elif location == "Schema13.TreeObject25":
-            Build_ID = decrypted_string
-
-    # Print the values of C2 and Build ID if they are found
-    if C2:
-        print("-----------------------------------------------------------------------------------")
-        print(f"C2: {C2}")
-    if Build_ID:
-        print(f"Build ID: {Build_ID}")
+    with open(file_path, "rb") as f:
+        result = parser.run(f)
+        if result:
+            print(result.model_dump_json(indent=2, exclude_none=True, exclude_defaults=True))
+        else:
+            print("No configuration extracted")

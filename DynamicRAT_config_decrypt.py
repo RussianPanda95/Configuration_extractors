@@ -5,6 +5,7 @@
 # b2a3112be417feb4f7c3b3f0385bdaee9213bf9cdc82136c05ebebb835c19a65
 
 import hashlib
+import magic
 import re
 import zipfile
 from string import printable, whitespace
@@ -29,6 +30,10 @@ class DynamicRAT(Extractor):
     reference: str = "https://gi7w0rm.medium.com/dynamicrat-a-full-fledged-java-rat-1a2dabb11694"
 
     def run(self, stream: BinaryIO, matches: List = []) -> Optional[ExtractorModel]:
+
+        if "JAR" not in magic.from_buffer(stream.read()):
+            return
+
         with zipfile.ZipFile(stream, "r") as jar:
             try:
                 # Extract the "Main.class" file contents as bytes

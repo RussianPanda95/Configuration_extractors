@@ -149,7 +149,7 @@ rule MetaStealer {
                         self.logger.info("Decrypted String:", string_result)
                         cfg.encryption.append(cfg.Encryption(algorithm="XOR", key=xor_key))
                         cfg.decoded_strings.append(string_result)
-                    except Exception as e:
+                    except Exception:
                         continue
 
         return cfg

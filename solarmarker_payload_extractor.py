@@ -60,6 +60,7 @@ rule  SolarMarker_payload {
 
     def run(self, stream: BinaryIO, matches: List = [], download_payload=False) -> Optional[ExtractorModel]:
         cfg = ExtractorModel(family=self.family)
+        server_url = None
         # Account for different ways of executing this extractor, both piece-wise and as a whole
         if not matches or (matches[0].rule == "SolarMarker_payload"):
             # We're dealing with the initial payload
@@ -92,7 +93,6 @@ rule  SolarMarker_payload {
 
             url_matches = [match.group() for match in url_regex.finditer(decoded) if match]
 
-            server_url = None
             print(url_matches)
             if len(url_matches) >= 2:
                 server_url = url_matches[1]
@@ -117,7 +117,10 @@ rule  SolarMarker_payload {
 
         if not content and (matches and matches[0].rule == "SolarMarker_backdoor"):
             # The file provided to the extractor is the backdoor that was downloaded by the server found in the initial payload
-            content = stream.read().decode()
+            try:
+                content = stream.read().decode()
+            except UnicodeDecodeError:
+                return
 
         if content:
             pattern = r"FromBase64String\('([^']*)="
