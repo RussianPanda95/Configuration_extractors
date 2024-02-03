@@ -17,7 +17,7 @@ from maco.model.model import ConnUsageEnum, ExtractorModel
 
 assets_file_path = "assets.dat"
 
-class_file = 'dynamic/client/Main.class'
+class_file = "dynamic/client/Main.class"
 search_pattern = rb"assets\.dat.{8}([A-Za-z0-9!@#$%^&*()\-_=+{}\[\]|:;'\"<>,./?]+)"
 
 

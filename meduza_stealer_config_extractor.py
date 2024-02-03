@@ -13,19 +13,17 @@
 # f575eb5246b5c6b9044ea04610528c040c982904a5fb3dc1909ce2f0ec15c9ef
 # a73e95fb7ba212f74e0116551ccba73dd2ccba87d8927af29499bba9b3287ea7
 
-import os
 import re
 import struct
-import pefile
-from capstone import *
-from capstone.x86 import *
-
-
-from maco.extractor import Extractor
-from maco.model import ExtractorModel, ConnUsageEnum
 from sys import argv
 from tempfile import NamedTemporaryFile
 from typing import BinaryIO, List, Optional
+
+import pefile
+from capstone import *
+from capstone.x86 import *
+from maco.extractor import Extractor
+from maco.model import ConnUsageEnum, ExtractorModel
 
 
 class MeduzaStealer(Extractor):
@@ -81,7 +79,7 @@ rule MeduzaStealer_1 {
             if result:
                 cfg = ExtractorModel(family=self.family)
                 # Add C2 to output
-                cfg.http.append(cfg.Http(hostname=result['c2'].replace('\u0000', ''), usage=ConnUsageEnum.c2))
+                cfg.http.append(cfg.Http(hostname=result["c2"].replace("\u0000", ""), usage=ConnUsageEnum.c2))
                 # Add XOR key to output
                 cfg.encryption.append(cfg.Encryption(algorithm="XOR", key=result["xor_key"]))
                 if "build" in result:
@@ -95,9 +93,9 @@ rule MeduzaStealer_1 {
                 result = []
                 while True:
                     byte = f.read(1)
-                    if byte == b'\x00':
+                    if byte == b"\x00":
                         break
-                    result.append(byte.decode('ISO-8859-1'))
+                    result.append(byte.decode("ISO-8859-1"))
             return "".join(result)
         except Exception as e:
             self.logger.info(f"Could not read the string due to: {e}")
@@ -107,14 +105,14 @@ rule MeduzaStealer_1 {
         pe = pefile.PE(filename)
         config = {}
 
-        text_section = next((section for section in pe.sections if section.Name.startswith(b'.text')), None)
+        text_section = next((section for section in pe.sections if section.Name.startswith(b".text")), None)
 
         image_base = pe.OPTIONAL_HEADER.ImageBase
         section_rva = text_section.VirtualAddress
         section_data = text_section.get_data()
 
-        pattern = rb'\x68.{2}\x49\x00\xB9.{2}\x4A\x00\xC7\x05'
-        pattern2 = rb'\x68.{2}\x49\x00\x8d\x4d\x80'
+        pattern = rb"\x68.{2}\x49\x00\xB9.{2}\x4A\x00\xC7\x05"
+        pattern2 = rb"\x68.{2}\x49\x00\x8d\x4d\x80"
 
         pattern_find = re.finditer(pattern, section_data, re.DOTALL)
 
@@ -125,7 +123,9 @@ rule MeduzaStealer_1 {
         instructions = []
         for match in pattern_find:
             scan_end = match.start()
-            for inst in md.disasm(section_data[scan_end-0x400:scan_end], image_base + section_rva + scan_end - 0x400):
+            for inst in md.disasm(
+                section_data[scan_end - 0x400 : scan_end], image_base + section_rva + scan_end - 0x400
+            ):
                 instructions.append(inst)
 
         data_values = []
@@ -139,17 +139,17 @@ rule MeduzaStealer_1 {
                 if (
                     instructions_count > 445
                     and instructions_count < 525
-                    and inst.mnemonic == 'mov'
+                    and inst.mnemonic == "mov"
                     and inst.operands[1].type == X86_OP_IMM
                     and inst.operands[0].type == X86_OP_MEM
-                    and not any(register in str(inst.operands[0]) for register in ['eax', 'ebx', 'ecx', 'edx'])
+                    and not any(register in str(inst.operands[0]) for register in ["eax", "ebx", "ecx", "edx"])
                 ):
                     second_operand = inst.operands[1].imm
                     if second_operand != 0x00000000:
                         merged_data = struct.pack("<I", second_operand)
                         data_values.insert(0, merged_data)
 
-        merged_value = b''.join(data_values)
+        merged_value = b"".join(data_values)
         half_length = len(merged_value) // 2
         data = merged_value[:half_length]
         key = merged_value[half_length:]
@@ -179,7 +179,7 @@ rule MeduzaStealer_1 {
                 scan_end = scan_start + additional_bytes
                 for inst in md.disasm(section_data[scan_start:scan_end], image_base + section_rva + scan_start):
                     instructions.append(inst)
-                    if inst.mnemonic == 'push' and not found_push:
+                    if inst.mnemonic == "push" and not found_push:
                         va = inst.operands[0].imm
                         #  converts the Virtual Address (VA) of the string to a file offset
                         offset = pe.get_offset_from_rva(va - image_base)
@@ -194,13 +194,13 @@ rule MeduzaStealer_1 {
         pe = pefile.PE(filename)
         config = {}
 
-        text_section = next((section for section in pe.sections if section.Name.startswith(b'.text')), None)
+        text_section = next((section for section in pe.sections if section.Name.startswith(b".text")), None)
 
         image_base = pe.OPTIONAL_HEADER.ImageBase
         section_rva = text_section.VirtualAddress
         section_data = text_section.get_data()
 
-        pattern3 = rb'\x48.{4}\x07\x00\x48.{4}\x08\x00'
+        pattern3 = rb"\x48.{4}\x07\x00\x48.{4}\x08\x00"
 
         matches = re.finditer(pattern3, section_data, re.DOTALL)
 
@@ -213,14 +213,16 @@ rule MeduzaStealer_1 {
 
         for match in matches:
             scan_end = match.start()
-            for inst in md.disasm(section_data[scan_end-0x400:scan_end], image_base + section_rva + scan_end - 0x400):
+            for inst in md.disasm(
+                section_data[scan_end - 0x400 : scan_end], image_base + section_rva + scan_end - 0x400
+            ):
                 instructions_count += 1
                 if instructions_count > 163 and instructions_count < 180:
                     instructions.append(inst)
 
         data_values = []
         for inst in reversed(instructions):
-            if inst.mnemonic == 'movabs':
+            if inst.mnemonic == "movabs":
                 second_operand = inst.operands[1].imm
                 try:
                     data_x64 = struct.pack("<q", second_operand)
@@ -229,7 +231,7 @@ rule MeduzaStealer_1 {
                     self.logger.info(f"Value {second_operand} is too large to pack.")
                     # self.logger.info(inst)
 
-        merged_value = b''.join(data_values)
+        merged_value = b"".join(data_values)
         half_length = len(merged_value) // 2
         data = merged_value[:half_length]
         key = merged_value[half_length:]
@@ -243,7 +245,7 @@ rule MeduzaStealer_1 {
         self.logger.info("Decrypted C2:", decrypted_c2)
         config["c2"] = decrypted_c2
 
-        pattern3 = rb'\x48.{4}\x05\x00\x48.{4}\x00\x00\xE8.{2}\xfe\xff'
+        pattern3 = rb"\x48.{4}\x05\x00\x48.{4}\x00\x00\xE8.{2}\xfe\xff"
         matches_64 = re.finditer(pattern3, section_data, re.DOTALL)
 
         instructions_count = 0
@@ -251,10 +253,10 @@ rule MeduzaStealer_1 {
 
         for match in matches_64:
             scan_end = match.start()
-            for inst in md.disasm(section_data[scan_end:scan_end + 0x400], image_base + section_rva + scan_end):
+            for inst in md.disasm(section_data[scan_end : scan_end + 0x400], image_base + section_rva + scan_end):
                 instructions.append(inst)
 
-                if inst.mnemonic == 'lea' and inst.reg_name(inst.operands[0].reg) == 'rdx':
+                if inst.mnemonic == "lea" and inst.reg_name(inst.operands[0].reg) == "rdx":
                     displacement = inst.operands[1].mem.disp
                     string_address = inst.address + inst.size + displacement
                     rva_string_address = string_address - image_base
@@ -265,7 +267,19 @@ rule MeduzaStealer_1 {
 
                         if raw_offset is not None:
                             string = self.read_string(filename, raw_offset)
-                            if string == "timezone" or string == "system" or string == 'time' or string == 'computer_name' or string == 'cpu' or string == 'core' or string == 'ram' or string == 'gpu' or string == 'user_name' or string == 'os' or string == 'execute_path':
+                            if (
+                                string == "timezone"
+                                or string == "system"
+                                or string == "time"
+                                or string == "computer_name"
+                                or string == "cpu"
+                                or string == "core"
+                                or string == "ram"
+                                or string == "gpu"
+                                or string == "user_name"
+                                or string == "os"
+                                or string == "execute_path"
+                            ):
                                 break
                             self.logger.info("Build name: ", string)
                             config["build"] = string
@@ -277,9 +291,9 @@ rule MeduzaStealer_1 {
     def define_binary(self, filename):
         pe = pefile.PE(filename)
 
-        if pe.FILE_HEADER.Machine == pefile.MACHINE_TYPE['IMAGE_FILE_MACHINE_AMD64']:
+        if pe.FILE_HEADER.Machine == pefile.MACHINE_TYPE["IMAGE_FILE_MACHINE_AMD64"]:
             return self.analyze_64bit_binary(filename)
-        elif pe.FILE_HEADER.Machine == pefile.MACHINE_TYPE['IMAGE_FILE_MACHINE_I386']:
+        elif pe.FILE_HEADER.Machine == pefile.MACHINE_TYPE["IMAGE_FILE_MACHINE_I386"]:
             return self.analyze_32bit_binary(filename)
         else:
             self.logger.info(f"Unsupported machine type: {pe.FILE_HEADER.Machine}")

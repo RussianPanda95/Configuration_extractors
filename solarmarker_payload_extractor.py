@@ -2,18 +2,18 @@
 # Tested on sample: 1160da03685be4abedafa4f03b02cdf3f3242bc1d6985187acf281f5c7e46168
 
 import re
-from dotnetfile import DotNetPE
 from base64 import b64decode
-import requests
-from Crypto.Cipher import AES
-from Crypto.Util.Padding import unpad
-
-
-from maco.extractor import Extractor
-from maco.model import ExtractorModel, ConnUsageEnum
 from sys import argv
 from tempfile import NamedTemporaryFile
 from typing import BinaryIO, List, Optional
+
+import requests
+from Crypto.Cipher import AES
+from Crypto.Util.Padding import unpad
+from dotnetfile import DotNetPE
+from maco.extractor import Extractor
+from maco.model import ConnUsageEnum, ExtractorModel
+
 
 class SolarMarker(Extractor):
     family = "SolarMarker"
@@ -78,14 +78,14 @@ rule  SolarMarker_payload {
             for string in data:
                 base64_matches.extend([match.group() for match in base64_regex.finditer(string) if match])
 
-            matches_string = ''.join(base64_matches)
+            matches_string = "".join(base64_matches)
 
             try:
                 decoded_bytes = b64decode(matches_string)
-                decoded = decoded_bytes.decode('utf-8')
+                decoded = decoded_bytes.decode("utf-8")
             except Exception as e:
                 print(f"Error while decoding base64 string: {e}")
-                decoded = ''
+                decoded = ""
 
             url_pattern = r"https://[\w\./-]*"
             url_regex = re.compile(url_pattern)
@@ -123,10 +123,10 @@ rule  SolarMarker_payload {
             pattern = r"FromBase64String\('([^']*)="
             regex = re.compile(pattern)
 
-            base64_payload = [match.group(1) + '=' for match in regex.finditer(content) if match]
+            base64_payload = [match.group(1) + "=" for match in regex.finditer(content) if match]
 
-            key_pattern = r'\$A\.Key=@\(\[byte\](.*?)\);'
-            iv_pattern = r'\$A\.IV=@\(\[byte\](.*?)\);'
+            key_pattern = r"\$A\.Key=@\(\[byte\](.*?)\);"
+            iv_pattern = r"\$A\.IV=@\(\[byte\](.*?)\);"
 
             key_match = re.search(key_pattern, content)
             iv_match = re.search(iv_pattern, content)
@@ -135,14 +135,14 @@ rule  SolarMarker_payload {
 
             if key_match:
                 key = key_match.group(1)
-                key_bytes = bytes([int(x) for x in key.split(',')])
-                print('Key:', key)
+                key_bytes = bytes([int(x) for x in key.split(",")])
+                print("Key:", key)
                 encryption.key = key
 
             if iv_match:
                 iv = iv_match.group(1)
-                iv_bytes = bytes([int(x) for x in iv.split(',')])
-                print('IV:', iv)
+                iv_bytes = bytes([int(x) for x in iv.split(",")])
+                print("IV:", iv)
                 encryption.iv = iv
 
             for i, b64_str in enumerate(base64_payload):
@@ -152,11 +152,13 @@ rule  SolarMarker_payload {
                     cipher = AES.new(key_bytes, AES.MODE_CBC, iv=iv_bytes)
                     decrypted_payload = unpad(cipher.decrypt(decoded), AES.block_size)
                     cfg.binaries.append(
-                        cfg.Binary(datatype=cfg.Binary.TypeEnum.payload, data=decrypted_payload, encryption=[encryption])
+                        cfg.Binary(
+                            datatype=cfg.Binary.TypeEnum.payload, data=decrypted_payload, encryption=[encryption]
+                        )
                     )
 
                     # Write the second-stage payload to a file
-                    with open(f'second_stage_payload.bin', 'wb') as f:
+                    with open(f"second_stage_payload.bin", "wb") as f:
                         f.write(decrypted_payload)
                     print("Success: 'second_stage_payload.bin' has been created")
 
@@ -167,6 +169,7 @@ rule  SolarMarker_payload {
 
 if __name__ == "__main__":
     import yara
+
     parser = SolarMarker()
     file_path = argv[1]
 

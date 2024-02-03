@@ -11,13 +11,14 @@
 
 import re
 import struct
-import pefile
-import requests
-
-from maco.extractor import Extractor
-from maco.model import ExtractorModel, ConnUsageEnum
 from sys import argv
 from typing import BinaryIO, List, Optional
+
+import pefile
+import requests
+from maco.extractor import Extractor
+from maco.model import ConnUsageEnum, ExtractorModel
+
 
 class Vidar(Extractor):
     family = "Vidar"
@@ -57,13 +58,13 @@ rule Vidar
         # Look for the C2 in the ".rdata" section
         c2 = []
         for s in pe.sections:
-            if s.Name.startswith(b'.rdata'):
+            if s.Name.startswith(b".rdata"):
                 rdata_start = s.VirtualAddress + pe.OPTIONAL_HEADER.ImageBase
                 rdata_end = rdata_start + s.Misc_VirtualSize
                 rdata_data = s.get_data()
 
-        for m in re.finditer(rb'(https?://[\d\w\.:/?#&+=_-]+)', rdata_data):
-            matches = m.group().decode().split('\0')[0]
+        for m in re.finditer(rb"(https?://[\d\w\.:/?#&+=_-]+)", rdata_data):
+            matches = m.group().decode().split("\0")[0]
             if len(matches) > 8:
                 c2.append(matches)
 
@@ -77,7 +78,9 @@ rule Vidar
                 self.logger.info(f"Timed out while connecting to {url}")
                 continue
 
-            ip_pattern = r"(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)[^\|]*"
+            ip_pattern = (
+                r"(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)[^\|]*"
+            )
             ip_addresses = set(re.findall(ip_pattern, response.content.decode()))
 
             if len(ip_addresses) > 0:
@@ -88,41 +91,41 @@ rule Vidar
                 self.logger.info(f"Did not find any C2 in {url}.")
 
         for s in pe.sections:
-            if s.Name.startswith(b'.rdata'):
+            if s.Name.startswith(b".rdata"):
                 rdata_start = s.VirtualAddress + pe.OPTIONAL_HEADER.ImageBase
                 rdata_end = rdata_start + s.Misc_VirtualSize
 
         try:
             rdata_data = None
             for s in pe.sections:
-                if s.Name.startswith(b'.rdata'):
+                if s.Name.startswith(b".rdata"):
                     rdata_start = s.VirtualAddress + pe.OPTIONAL_HEADER.ImageBase
                     rdata_end = rdata_start + s.Misc_VirtualSize
                     rdata_data = s.get_data()
 
             text_data = None
             for s in pe.sections:
-                if s.Name.startswith(b'.text'):
+                if s.Name.startswith(b".text"):
                     text_data = s.get_data()
 
             # Find version based on the opcodes
-            pattern = rb'\x68(....)\x89\x45\xfc\x88\x06\xe8(....)\x83\xc4\x04|\x68(....)\x8b\xce\x89\x45\xfc\x88\x06'
+            pattern = rb"\x68(....)\x89\x45\xfc\x88\x06\xe8(....)\x83\xc4\x04|\x68(....)\x8b\xce\x89\x45\xfc\x88\x06"
 
             results = []
             for m in re.finditer(pattern, text_data):
                 if m.group(1):
-                    enc_str = struct.unpack('<I', m.group(1))[0]
+                    enc_str = struct.unpack("<I", m.group(1))[0]
                 elif m.group(2):
-                    enc_str = struct.unpack('<I', m.group(2))[0]
+                    enc_str = struct.unpack("<I", m.group(2))[0]
                 else:
-                    enc_str = struct.unpack('<I', m.group(3))[0]
+                    enc_str = struct.unpack("<I", m.group(3))[0]
                 if rdata_start <= enc_str <= rdata_end:
                     enc_str = pe.get_string_at_rva(enc_str - pe.OPTIONAL_HEADER.ImageBase, 50)
                     results.append(enc_str)
 
             version = None
             for result in results:
-                if '.' in result and version is None:
+                if "." in result and version is None:
                     version = result
             self.logger.info(f"Version: {version}")
             cfg.version = version
@@ -130,8 +133,8 @@ rule Vidar
         # Look for the version in ".rdata" if there are no xrefs. NOTE: this might produce False Positive results
         except:
             version = []
-            for m in re.finditer(rb'\b\d+\.\d+\b', rdata_data):
-                version.append(m.group().replace(b'\x00', b''))
+            for m in re.finditer(rb"\b\d+\.\d+\b", rdata_data):
+                version.append(m.group().replace(b"\x00", b""))
             self.logger.info(f"Version: {(version[2].decode())}")
             cfg.version = version[2].decode()
         return cfg
@@ -139,6 +142,7 @@ rule Vidar
 
 if __name__ == "__main__":
     import yara
+
     parser = Vidar()
     file_path = argv[1]
 

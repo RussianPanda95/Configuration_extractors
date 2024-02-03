@@ -1,14 +1,14 @@
 # Tested on the latest unpacked/unobfuscated builds using the XOR instead of RC4
 
+import binascii
 import re
 import struct
-import pefile
-import binascii
-
-from maco.extractor import Extractor
-from maco.model import ExtractorModel, ConnUsageEnum
 from sys import argv
 from typing import BinaryIO, List, Optional
+
+import pefile
+from maco.extractor import Extractor
+from maco.model import ConnUsageEnum, ExtractorModel
 
 
 class RaccoonStealer(Extractor):
@@ -69,7 +69,7 @@ rule RaccoonStealerv2 {
         rdata_end = None
 
         for s in pe.sections:
-            if s.Name.startswith(b'.rdata'):
+            if s.Name.startswith(b".rdata"):
                 rdata_start = s.VirtualAddress + pe.OPTIONAL_HEADER.ImageBase
                 rdata_end = rdata_start + s.Misc_VirtualSize
 
@@ -78,13 +78,13 @@ rule RaccoonStealerv2 {
         text_data = None
 
         for s in pe.sections:
-            if s.Name.startswith(b'.text'):
+            if s.Name.startswith(b".text"):
                 text_data = s.get_data()
 
         assert text_data is not None
 
-        pattern = rb'\x6A(.)\xBA(....)\xB9(....)\xE8(....)'
-        pattern2 = rb'\x68(....).\x68\x01\x00\x1f\x00|\x68(....)..\x68\x01\x00\x1f\x00'
+        pattern = rb"\x6A(.)\xBA(....)\xB9(....)\xE8(....)"
+        pattern2 = rb"\x68(....).\x68\x01\x00\x1f\x00|\x68(....)..\x68\x01\x00\x1f\x00"
 
         enc_str_strip = None
         key = None
@@ -92,15 +92,15 @@ rule RaccoonStealerv2 {
 
         enc_strings = []
         for m in re.finditer(pattern, text_data):
-            str_len = struct.unpack('B', m.group(1))[0]
-            str = struct.unpack('<I', m.group(3))[0]
-            enc_str = struct.unpack('<I', m.group(2))[0]
+            str_len = struct.unpack("B", m.group(1))[0]
+            str = struct.unpack("<I", m.group(3))[0]
+            enc_str = struct.unpack("<I", m.group(2))[0]
 
             # Retrieving the encoded string
             if rdata_start <= enc_str <= rdata_end:
                 enc_str = pe.get_data(enc_str - pe.OPTIONAL_HEADER.ImageBase, str_len)
                 if len(enc_str) >= 32:
-                    enc_str_strip = enc_str[:enc_str.index(b'\x00')]
+                    enc_str_strip = enc_str[: enc_str.index(b"\x00")]
                     self.logger.info(f"Encoded string: {enc_str_strip}")
 
             # Retrieving the XOR key
@@ -109,7 +109,7 @@ rule RaccoonStealerv2 {
                 break
 
         decrypt_me = xor_decrypt(enc_str_strip, key)
-        decr_str = ''.join(map(chr, decrypt_me))
+        decr_str = "".join(map(chr, decrypt_me))
 
         cfg = ExtractorModel(family=self.family, version="2")
 
@@ -117,25 +117,24 @@ rule RaccoonStealerv2 {
         slash_strip = decr_str.rfind("/")
         if slash_strip != -1:
             # Keep everything before the last "/"
-            decr_str = decr_str[:slash_strip+1]
+            decr_str = decr_str[: slash_strip + 1]
 
         self.logger.info(f"C2: {decr_str}")
         cfg.http.append(cfg.Http(uri=decr_str, usage=ConnUsageEnum.c2))
-        key_hex = binascii.hexlify(key).decode('utf-8')
+        key_hex = binascii.hexlify(key).decode("utf-8")
         self.logger.info(f"XOR Key: {key_hex[:46]}")
-        cfg.encryption.append(cfg.Encryption(algorithm="XOR",key=key_hex))
-
+        cfg.encryption.append(cfg.Encryption(algorithm="XOR", key=key_hex))
 
         # Retrieving the Mutex/User-Agent string
         for m in re.finditer(pattern2, text_data):
             if m.group(1):
-                enc_str = struct.unpack('<I', m.group(1))[0]
+                enc_str = struct.unpack("<I", m.group(1))[0]
             else:
-                enc_str = struct.unpack('<I', m.group(2))[0]
+                enc_str = struct.unpack("<I", m.group(2))[0]
 
             if rdata_start <= enc_str <= rdata_end:
                 enc_str = pe.get_data(enc_str - pe.OPTIONAL_HEADER.ImageBase)
-                mutex = enc_str[:28].decode('utf-8')
+                mutex = enc_str[:28].decode("utf-8")
 
         self.logger.info(f"Mutex/User-Agent: {mutex}")
         cfg.mutex.append(mutex)

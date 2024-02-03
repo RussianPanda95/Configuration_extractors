@@ -17,17 +17,16 @@
 # b8a9215b1d7e35698f757e20e1fc47bc
 # 1b7e8401b1b7176921050f46e01bf796
 
-import yara
-import capstone
-import pefile
 import sys
-
-from maco.extractor import Extractor
-from maco.model import ExtractorModel, ConnUsageEnum
 from sys import argv
 from tempfile import NamedTemporaryFile
 from typing import BinaryIO, List, Optional
 
+import capstone
+import pefile
+import yara
+from maco.extractor import Extractor
+from maco.model import ConnUsageEnum, ExtractorModel
 
 skip_rule = """
 rule skip_pattern {
@@ -50,6 +49,7 @@ rule darkvnc_rule: bar {
 skip_rules = yara.compile(source=skip_rule)
 analyze_rules = yara.compile(source=darkvnc_rule)
 
+
 def get_virtual_address_from_offset(pe, offset):
     for section in pe.sections:
         if section.PointerToRawData <= offset < section.PointerToRawData + section.SizeOfRawData:
@@ -58,7 +58,7 @@ def get_virtual_address_from_offset(pe, offset):
 
 
 def find_embedded_binaries(data):
-    PE_signature = b'MZ'
+    PE_signature = b"MZ"
 
     offset = 0
     while True:
@@ -85,6 +85,7 @@ def find_embedded_binaries(data):
         offset += 1
 
     return None
+
 
 class DarkVNC(Extractor):
     family = "DarkVNC"
@@ -114,10 +115,12 @@ rule DarkVNC {
         matches = analyze_rules.match(data=data)
         pe = pefile.PE(data=data)
 
-
-
         # Check if it's a 32-bit or 64-bit binary
-        mode = capstone.CS_MODE_32 if pe.FILE_HEADER.Machine == pefile.MACHINE_TYPE['IMAGE_FILE_MACHINE_I386'] else capstone.CS_MODE_64
+        mode = (
+            capstone.CS_MODE_32
+            if pe.FILE_HEADER.Machine == pefile.MACHINE_TYPE["IMAGE_FILE_MACHINE_I386"]
+            else capstone.CS_MODE_64
+        )
         disassembler = capstone.Cs(capstone.CS_ARCH_X86, mode)
         disassembler.detail = True
 
@@ -130,7 +133,7 @@ rule DarkVNC {
                 virtual_address = get_virtual_address_from_offset(pe, offset)
 
                 instructions_count = 0
-                for i in disassembler.disasm(data[offset:offset + 1000], virtual_address):
+                for i in disassembler.disasm(data[offset : offset + 1000], virtual_address):
                     if instructions_count >= 55:
                         break
 
@@ -141,17 +144,17 @@ rule DarkVNC {
                         elif i.op_str.startswith("dl, "):
                             key = chr(int(i.op_str.split(", ")[1], 16))
 
-                    #print(f"0x{i.address:X}:\t{i.mnemonic}\t{i.op_str}")
+                    # print(f"0x{i.address:X}:\t{i.mnemonic}\t{i.op_str}")
                     instructions_count += 1
 
-        encoded_str = ''.join(extracted_chars)
-        decrypted_string = ''.join([chr(ord(char) ^ ord(key)) for char in encoded_str])
-        cleaned_string = ''.join([char for char in decrypted_string if char.isdigit() or char == "." or char == ":"])
-        ip, port = cleaned_string.rsplit(':', 1)
-        cfg = ExtractorModel(family=self.family,
-                             tcp=[ExtractorModel.Connection(server_ip=ip,
-                                                            server_port=int(port),
-                                                            usage=ConnUsageEnum.c2)])
+        encoded_str = "".join(extracted_chars)
+        decrypted_string = "".join([chr(ord(char) ^ ord(key)) for char in encoded_str])
+        cleaned_string = "".join([char for char in decrypted_string if char.isdigit() or char == "." or char == ":"])
+        ip, port = cleaned_string.rsplit(":", 1)
+        cfg = ExtractorModel(
+            family=self.family,
+            tcp=[ExtractorModel.Connection(server_ip=ip, server_port=int(port), usage=ConnUsageEnum.c2)],
+        )
         self.logger.info(f"C2: {cleaned_string}")
         return cfg
 

@@ -1,19 +1,19 @@
-from dotnetfile import DotNetPE
-from Crypto.Cipher import AES
-from backports.pbkdf2 import pbkdf2_hmac
-from base64 import b64decode
 import os
 import re
-
-from maco.extractor import Extractor
-from maco.model import ExtractorModel, ConnUsageEnum
+from base64 import b64decode
 from sys import argv
 from tempfile import NamedTemporaryFile
 from typing import BinaryIO, List, Optional
 
-SALT = b'\xbf\xeb\x1e\x56\xfb\xcd\x97\x3b\xb2\x19\x02\x24\x30\xa5\x78\x43\x00\x3d\x56\x44\xd2\x1e\x62\xb9\xd4\xf1\x80\xe7\xe6\xc3\x39\x41'
+from backports.pbkdf2 import pbkdf2_hmac
+from Crypto.Cipher import AES
+from dotnetfile import DotNetPE
+from maco.extractor import Extractor
+from maco.model import ConnUsageEnum, ExtractorModel
 
-B64_VALUES = ['Version', 'Hosts', 'Subdirectory', 'InstallName', 'Mutex', 'StartupKey', 'Tag', 'LogDirectoryName']
+SALT = b"\xbf\xeb\x1e\x56\xfb\xcd\x97\x3b\xb2\x19\x02\x24\x30\xa5\x78\x43\x00\x3d\x56\x44\xd2\x1e\x62\xb9\xd4\xf1\x80\xe7\xe6\xc3\x39\x41"
+
+B64_VALUES = ["Version", "Hosts", "Subdirectory", "InstallName", "Mutex", "StartupKey", "Tag", "LogDirectoryName"]
 
 
 def decrypt_AES(ciphertext, key, iv):
@@ -21,8 +21,9 @@ def decrypt_AES(ciphertext, key, iv):
     plaintext = cipher.decrypt(ciphertext)
     return plaintext
 
+
 def get_value_strings(value_decode_list, key, iv):
-    non_printable_ascii = re.compile('[^\x20-\x7E]')
+    non_printable_ascii = re.compile("[^\x20-\x7E]")
     value_strings = []
     for value_decode in value_decode_list:
         try:
@@ -30,13 +31,14 @@ def get_value_strings(value_decode_list, key, iv):
             value_strip = value_decrypt[48:]
             value_strip = value_strip.decode()
             # Remove non-printable ASCII characters
-            value_strip = non_printable_ascii.sub('', value_strip)
+            value_strip = non_printable_ascii.sub("", value_strip)
             # Replace "\n" with an empty string
-            value_strip = value_strip.replace('\n', '')
+            value_strip = value_strip.replace("\n", "")
             value_strings.append(value_strip)
         except:
             pass
     return value_strings
+
 
 class QuasarRAT(Extractor):
     family = "QuasarRAT"
@@ -98,7 +100,6 @@ rule Quasar_RAT_2 {
 
     def run(self, stream: BinaryIO, matches: List = []) -> Optional[ExtractorModel]:
 
-
         with NamedTemporaryFile() as file:
             file.write(stream.read())
             file.flush()
@@ -121,7 +122,7 @@ rule Quasar_RAT_2 {
                     value_decode_list.append(value_decode)
 
             key_enc = matches[8]
-            key_enc = bytes(key_enc, 'utf-8')
+            key_enc = bytes(key_enc, "utf-8")
             key_size = 16
             key = pbkdf2_hmac("sha1", key_enc, SALT, 50000, key_size)
             key_s = matches[2]
@@ -135,7 +136,7 @@ rule Quasar_RAT_2 {
 
                 key_size = 32
                 key_enc = matches[6]
-                key_enc = bytes(key_enc, 'utf-8')
+                key_enc = bytes(key_enc, "utf-8")
                 key = pbkdf2_hmac("sha1", key_enc, SALT, 50000, key_size)
                 key_s = matches[6]
                 value_strings = get_value_strings(value_decode_list, key, iv)
@@ -148,38 +149,45 @@ rule Quasar_RAT_2 {
 
             config_dict = {"Key": key_s, "EncryptionKey": encryption_key, "Authkey": authkey}
             config_dict.update({B64_VALUES[i]: value_string for i, value_string in enumerate(value_strings)})
-            [self.logger.info(f"{k}: {v}")for k, v in config_dict.items()]
+            [self.logger.info(f"{k}: {v}") for k, v in config_dict.items()]
 
             cfg = ExtractorModel(family=self.family)
 
             # Set version
-            cfg.version = config_dict.pop('Version')
+            cfg.version = config_dict.pop("Version")
 
             # Append C2 hosts
-            [cfg.http.append(cfg.Http(uri=c2, usage=ConnUsageEnum.c2)) for c2 in config_dict.pop('Hosts', '').split(';')]
+            [
+                cfg.http.append(cfg.Http(uri=c2, usage=ConnUsageEnum.c2))
+                for c2 in config_dict.pop("Hosts", "").split(";")
+            ]
 
             # Append install path
-            cfg.paths.append(cfg.Path(
-                path=os.path.join(config_dict.pop('Subdirectory'), config_dict.pop('InstallName')),
-                usage=cfg.Path.UsageEnum.install)
+            cfg.paths.append(
+                cfg.Path(
+                    path=os.path.join(config_dict.pop("Subdirectory"), config_dict.pop("InstallName")),
+                    usage=cfg.Path.UsageEnum.install,
+                )
             )
 
             # Append mutex
-            cfg.mutex.append(config_dict.pop('Mutex', ''))
+            cfg.mutex.append(config_dict.pop("Mutex", ""))
 
             # Append encryption details used for comms
             cfg.encryption.append(
                 cfg.Encryption(
                     algorithm="AES",
-                    key=config_dict.pop('Key'),
+                    key=config_dict.pop("Key"),
                     iv=str(iv),
-                    usage=cfg.Encryption.UsageEnum.communication)
+                    usage=cfg.Encryption.UsageEnum.communication,
+                )
             )
 
             # Append registry keys used
-            cfg.registry.append(cfg.Registry(
-                key=f"HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run\\{config_dict.pop('StartupKey')}",
-                usage=cfg.Registry.UsageEnum.persistence
+            cfg.registry.append(
+                cfg.Registry(
+                    key=f"HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run\\{config_dict.pop('StartupKey')}",
+                    usage=cfg.Registry.UsageEnum.persistence,
                 )
             )
 

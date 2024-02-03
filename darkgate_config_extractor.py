@@ -10,7 +10,7 @@ from typing import BinaryIO, List, Optional
 
 import pefile
 from maco.extractor import Extractor
-from maco.model import ExtractorModel, ConnUsageEnum
+from maco.model import ConnUsageEnum, ExtractorModel
 
 # Mapping from https://github.com/telekom-security/malware_analysis/blob/main/darkgate/extractor.py
 CONFIG_FLAG_MAPPING = {

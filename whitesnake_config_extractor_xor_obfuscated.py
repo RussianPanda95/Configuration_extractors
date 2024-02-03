@@ -1,15 +1,16 @@
-#Author: RussianPanda
-#Tested on samples:
+# Author: RussianPanda
+# Tested on samples:
 # f7b02278a2310a2657dcca702188af461ce8450dc0c5bced802773ca8eab6f50
 # c219beaecc91df9265574eea6e9d866c224549b7f41cdda7e85015f4ae99b7c7
 
 import argparse
-import clr
 import os
 
-parser = argparse.ArgumentParser(description='Extract information from a target assembly file.')
-parser.add_argument('-f', '--file', required=True, help='Path to the stealer file')
-parser.add_argument('-d', '--dnlib', required=True, help='Path to the dnlib.dll')
+import clr
+
+parser = argparse.ArgumentParser(description="Extract information from a target assembly file.")
+parser.add_argument("-f", "--file", required=True, help="Path to the stealer file")
+parser.add_argument("-d", "--dnlib", required=True, help="Path to the dnlib.dll")
 args = parser.parse_args()
 
 if not os.path.exists(args.dnlib):
@@ -25,7 +26,7 @@ module = dnlib.DotNet.ModuleDefMD.Load(args.file)
 
 
 def xor_strings(data, key):
-    return ''.join(chr(ord(a) ^ ord(b)) for a, b in zip(data, key * (len(data) // len(key) + 1)))
+    return "".join(chr(ord(a) ^ ord(b)) for a, b in zip(data, key * (len(data) // len(key) + 1)))
 
 
 def has_target_opcode_sequence(method):
@@ -34,7 +35,7 @@ def has_target_opcode_sequence(method):
     if method.HasBody:
         opcode_sequence = [instr.OpCode for instr in method.Body.Instructions]
         for i in range(len(opcode_sequence) - len(target_opcode_sequence) + 1):
-            if opcode_sequence[i:i + len(target_opcode_sequence)] == target_opcode_sequence:
+            if opcode_sequence[i : i + len(target_opcode_sequence)] == target_opcode_sequence:
                 return True
     return False
 
@@ -59,7 +60,7 @@ def process_methods():
                             decrypted_strings.append(decrypted_string)
 
                     # Only consider ldstr instructions
-                    if instr1.OpCode == OpCodes.Ldstr and (instr1.Operand == '1' or instr1.Operand == '0'):
+                    if instr1.OpCode == OpCodes.Ldstr and (instr1.Operand == "1" or instr1.Operand == "0"):
                         check_list.append(instr1.Operand)
 
     return decrypted_strings, check_list
@@ -68,22 +69,46 @@ def process_methods():
 def print_stealer_configuration(decrypted_strings, xml_declaration_index):
     config_cases = {
         ".": {
-            "offsets": [(5, "Telgeram Bot Token"), (7, "Mutex"), (8, "Build Tag"), (4, "Telgeram Chat ID"),
-                        (1, "Stealer Tor Folder Name"), (2, "Stealer Folder Name"), (6, "RSAKeyValue")]
+            "offsets": [
+                (5, "Telgeram Bot Token"),
+                (7, "Mutex"),
+                (8, "Build Tag"),
+                (4, "Telgeram Chat ID"),
+                (1, "Stealer Tor Folder Name"),
+                (2, "Stealer Folder Name"),
+                (6, "RSAKeyValue"),
+            ]
         },
         "RSAKeyValue": {
-            "offsets": [(1, "Stealer Tor Folder Name"), (2, "Stealer Folder Name"), (3, "Build Version"),
-                        (4, "Telgeram Chat ID"), (5, "Telgeram Bot Token"), (6, "Mutex"), (7, "Build Tag")]
+            "offsets": [
+                (1, "Stealer Tor Folder Name"),
+                (2, "Stealer Folder Name"),
+                (3, "Build Version"),
+                (4, "Telgeram Chat ID"),
+                (5, "Telgeram Bot Token"),
+                (6, "Mutex"),
+                (7, "Build Tag"),
+            ]
         },
         "else": {
-            "offsets": [(1, "Stealer Tor Folder Name"), (2, "Stealer Folder Name"), (3, "Build Version"),
-                        (4, "Telgeram Chat ID"), (5, "Telgeram Bot Token"), (6, "RSAKeyValue"), (7, "Mutex"),
-                        (8, "Build Tag")]
-        }
+            "offsets": [
+                (1, "Stealer Tor Folder Name"),
+                (2, "Stealer Folder Name"),
+                (3, "Build Version"),
+                (4, "Telgeram Chat ID"),
+                (5, "Telgeram Bot Token"),
+                (6, "RSAKeyValue"),
+                (7, "Mutex"),
+                (8, "Build Tag"),
+            ]
+        },
     }
 
-    condition = "." if "." in decrypted_strings[xml_declaration_index - 1] else \
-        "RSAKeyValue" if "RSAKeyValue" not in decrypted_strings[xml_declaration_index - 6] else "else"
+    condition = (
+        "."
+        if "." in decrypted_strings[xml_declaration_index - 1]
+        else "RSAKeyValue" if "RSAKeyValue" not in decrypted_strings[xml_declaration_index - 6] else "else"
+    )
     offsets = config_cases[condition]["offsets"]
     config_data = {o: decrypted_strings[xml_declaration_index - o] for o, _ in offsets if xml_declaration_index >= o}
     for o, n in offsets:
@@ -99,7 +124,7 @@ def print_features_status(check_list):
         (4, "Local Users Spread"),
     ]
     for o, n in features:
-        status = 'Enabled' if check_list[o] == '1' else 'Disabled'
+        status = "Enabled" if check_list[o] == "1" else "Disabled"
         print(f"{n}: {status}")
 
 

@@ -1,14 +1,14 @@
-import struct
-import malduck
 import re
-
-from maco.extractor import Extractor
-from maco.model import ExtractorModel, ConnUsageEnum
+import struct
 from sys import argv
 from typing import BinaryIO, List, Optional
 
+import malduck
+from maco.extractor import Extractor
+from maco.model import ConnUsageEnum, ExtractorModel
 
-class Ursnif (Extractor):
+
+class Ursnif(Extractor):
     family = "Ursnif"
     author = "@RussianPanda"
     last_modified = "2024-01-20"
@@ -40,23 +40,23 @@ rule UrsnifV3
         jj_structure = []
 
         for i in range(len(data)):
-            if data[i:i+2] == b'JJ':
-                jj_structure.append(data[i:i+20])
-        extracted_blob_one = data[43520:43520+511]
+            if data[i : i + 2] == b"JJ":
+                jj_structure.append(data[i : i + 20])
+        extracted_blob_one = data[43520 : 43520 + 511]
         blob = malduck.aplib.decompress(extracted_blob_one)
-        convert_bytes_to_str = blob.decode(errors='replace')
+        convert_bytes_to_str = blob.decode(errors="replace")
 
         # grabbing the C2 information
         C2_table = []
-        matches = re.finditer(r'([-\w]+(\.[-\w]+)+)', convert_bytes_to_str)
+        matches = re.finditer(r"([-\w]+(\.[-\w]+)+)", convert_bytes_to_str)
         for m in matches:
             C2_table.append(m.group(0))
         del C2_table[0]
 
         # grabbing wordlist
-        extracted_blob_two = data[44032:44032+475]
+        extracted_blob_two = data[44032 : 44032 + 475]
         blob_two = malduck.aplib.decompress(extracted_blob_two)
-        wordlist = blob_two.decode(errors='replace').strip('\r\n').split('\r\n')
+        wordlist = blob_two.decode(errors="replace").strip("\r\n").split("\r\n")
         self.logger.info(wordlist)
         del wordlist[0]
 
@@ -74,8 +74,7 @@ rule UrsnifV3
                 cfg.http = [cfg.Http(hostname=i, usage=ConnUsageEnum.c2) for i in C2_table]
             if hash_offset == 1760278915:
                 self.logger.info(f"WORDLIST: {wordlist} at offset " + hex(44032))
-                cfg.other['wordlist'] = wordlist
-
+                cfg.other["wordlist"] = wordlist
 
             blob_offset = struct.unpack("<I", jj_structure[i][12:16])[0] - 8704
             blob_size = struct.unpack("<I", jj_structure[i][16:20])[0]

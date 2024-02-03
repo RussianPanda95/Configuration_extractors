@@ -3,30 +3,32 @@
 # Tested on sample:
 # 008f9352765d1b3360726363e3e179b527a566bc59acecea06bd16eb16b66c5d
 
-import clr
 import os
 import sys
 
+import clr
+
 # Add reference to dnlib.dll
-dnlib_path = "path_to_dnlib"
+dnlib_path = "dnlib.dll"
 if not os.path.exists(dnlib_path):
     raise FileNotFoundError(dnlib_path)
 clr.AddReference(dnlib_path)
 import dnlib
 from dnlib.DotNet import ModuleDefMD
 from dnlib.DotNet.Emit import OpCodes
+from System import Convert, Int32, String
 from System.Reflection import Assembly, BindingFlags
-from System import Int32, String, Convert
 
-decryption_signature = [
-    {"Parameters": ["System.Int32"], "ReturnType": "System.String"}
-]
+decryption_signature = [{"Parameters": ["System.Int32"], "ReturnType": "System.String"}]
+
 
 def load_net_module(file_path):
     return ModuleDefMD.Load(file_path)
 
+
 def load_net_assembly(file_path):
     return Assembly.LoadFile(file_path)
+
 
 def find_decryption_methods(assembly):
     suspected_methods = []
@@ -38,11 +40,15 @@ def find_decryption_methods(assembly):
                     suspected_methods.append(method)
     return suspected_methods
 
+
 def method_matches_signature(method, signature):
     parameters = method.GetParameters()
-    return len(parameters) == len(signature["Parameters"]) and \
-           method.ReturnType.FullName == signature["ReturnType"] and \
-           all(parameters[i].ParameterType.FullName == signature["Parameters"][i] for i in range(len(parameters)))
+    return (
+        len(parameters) == len(signature["Parameters"])
+        and method.ReturnType.FullName == signature["ReturnType"]
+        and all(parameters[i].ParameterType.FullName == signature["Parameters"][i] for i in range(len(parameters)))
+    )
+
 
 def get_operand_value(insn, param_type):
     if "Int32" in param_type and insn.IsLdcI4():
@@ -50,6 +56,7 @@ def get_operand_value(insn, param_type):
     elif "String" in param_type and insn.OpCode == OpCodes.Ldstr:
         return insn.Operand
     return None
+
 
 def invoke_methods(module, suspected_methods):
     results = {}
@@ -74,6 +81,7 @@ def invoke_methods(module, suspected_methods):
                                         None
     return results
 
+
 def invoke_method_safely(method, params):
     try:
         if method.Name == "Get" and isinstance(params[0], int):
@@ -90,6 +98,7 @@ def invoke_method_safely(method, params):
         print(f"Error invoking method {method.Name}: {e}")
         return None
 
+
 def extract_parameters(instructions, insn_idx, method):
     params = []
     num_params = len(method.GetParameters())
@@ -102,6 +111,7 @@ def extract_parameters(instructions, insn_idx, method):
             params.append(operand)
     return list(reversed(params))
 
+
 def invoke_and_process(method, params):
     try:
         result = method.Invoke(None, params)
@@ -111,6 +121,7 @@ def invoke_and_process(method, params):
     except Exception as e:
         print(f"Error invoking method {method.Name}: {e}")
         return None
+
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
@@ -142,7 +153,7 @@ if __name__ == "__main__":
 
     # Print the values of C2 and Build ID if they are found
     if C2:
-        print('-----------------------------------------------------------------------------------')
+        print("-----------------------------------------------------------------------------------")
         print(f"C2: {C2}")
     if Build_ID:
         print(f"Build ID: {Build_ID}")

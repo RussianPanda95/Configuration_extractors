@@ -1,13 +1,14 @@
-#Author: RussianPanda
+# Author: RussianPanda
 
 import argparse
-import clr
-import os
 import logging
+import os
 
-parser = argparse.ArgumentParser(description='Extract information from a target assembly file.')
-parser.add_argument('-f', '--file', required=True, help='Path to the stealer file')
-parser.add_argument('-d', '--dnlib', required=True, help='Path to the dnlib.dll')
+import clr
+
+parser = argparse.ArgumentParser(description="Extract information from a target assembly file.")
+parser.add_argument("-f", "--file", required=True, help="Path to the stealer file")
+parser.add_argument("-d", "--dnlib", required=True, help="Path to the dnlib.dll")
 args = parser.parse_args()
 
 if not os.path.exists(args.dnlib):
@@ -21,7 +22,8 @@ from dnlib.DotNet.Emit import OpCodes
 
 module = dnlib.DotNet.ModuleDefMD.Load(args.file)
 
-logging.basicConfig(filename='app.log', filemode='w', format='%(name)s - %(levelname)s - %(message)s')
+logging.basicConfig(filename="app.log", filemode="w", format="%(name)s - %(levelname)s - %(message)s")
+
 
 def Ichduzekkvzjdxyftabcqu(A_0, A_1):
     try:
@@ -33,7 +35,7 @@ def Ichduzekkvzjdxyftabcqu(A_0, A_1):
             array[i] = i
 
         for j in range(256):
-            num = ((ord(A_1[j % len(A_1)]) + array[j] + num) % 256)
+            num = (ord(A_1[j % len(A_1)]) + array[j] + num) % 256
             num2 = array[j]
             array[j] = array[num]
             array[num] = num2
@@ -47,10 +49,11 @@ def Ichduzekkvzjdxyftabcqu(A_0, A_1):
             decrypted_char = chr(ord(A_0[k]) ^ array[(array[num3] + array[num]) % 256])
             string_builder.append(decrypted_char)
 
-        return ''.join(string_builder)
+        return "".join(string_builder)
     except Exception as e:
         logging.error("Error occurred in Ichduzekkvzjdxyftabcqu: " + str(e))
         return None
+
 
 def has_target_opcode_sequence(method):
     target_opcode_sequence = [OpCodes.Ldstr, OpCodes.Ldstr, OpCodes.Call, OpCodes.Stelem_Ref]
@@ -61,10 +64,11 @@ def has_target_opcode_sequence(method):
 
         # Check if the target sequence is present in the opcode sequence
         for i in range(len(opcode_sequence) - len(target_opcode_sequence) + 1):
-            if opcode_sequence[i:i+len(target_opcode_sequence)] == target_opcode_sequence:
+            if opcode_sequence[i : i + len(target_opcode_sequence)] == target_opcode_sequence:
                 return True
 
     return False
+
 
 ldstr_counter = 0
 decrypted_strings = []
@@ -78,7 +82,7 @@ for type in module.GetTypes():
                 if instr.OpCode == OpCodes.Ldstr:
                     ldstr_counter += 1
                     if ldstr_counter > 21:
-                        if instr.Operand == '1' or instr.Operand == '0':
+                        if instr.Operand == "1" or instr.Operand == "0":
                             decrypted_strings.append(instr.Operand)
                         elif i + 1 < len(instructions):
                             encrypted_data = instr.Operand
@@ -120,7 +124,7 @@ if xml_declaration_index is not None:
 
     config_data = {o: decrypted_strings[xml_declaration_index - o] for o, _ in features if xml_declaration_index >= o}
     for o, n in features:
-        status = 'Enabled' if config_data.get(o, '0') == '1' else 'Not Enabled'
+        status = "Enabled" if config_data.get(o, "0") == "1" else "Not Enabled"
         print(f"{n}: {status}")
 
 for data in decrypted_strings:
