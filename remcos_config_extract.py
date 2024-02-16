@@ -29,7 +29,7 @@ def extract_all_rcdata(pe_data):
                     for entry_lang in resource.directory.entries:
                         data_rva = entry_lang.data.struct.OffsetToData
                         size = entry_lang.data.struct.Size
-                        data = pe.get_memory_mapped_image()[data_rva : data_rva + size]
+                        data = pe.get_memory_mapped_image()[data_rva: data_rva + size]
                         rcdata_values.append(data)
 
     return rcdata_values
@@ -44,24 +44,27 @@ class Remcos(Extractor):
 
     def run(self, stream: BinaryIO, matches: List = []) -> Optional[ExtractorModel]:
 
-        rcdata_contents = extract_all_rcdata(stream.read())
-
-        if rcdata_contents:
-            cfg = ExtractorModel(family=self.family)
-            for rcdata in rcdata_contents:
-                if len(rcdata) > 1:
-                    key_length = rcdata[0]
-                    key = rcdata[1 : 1 + key_length]
-                    encrypted_data = rcdata[1 + key_length :]
-                    decrypted_data = decrypt_rc4_data(encrypted_data, key)
-                    decoded_data = decrypted_data.decode("utf-8", "replace")
-                    printable = set(string.printable)  #
-                    filtered_data = list(filter(lambda x: x in printable, decoded_data))
-                    self.logger.info("Decrypted Config:", "".join(filtered_data))
-                    cfg.decoded_strings = filtered_data
-            return cfg
-        else:
-            self.logger.info("No RCDATA found")
+        try:
+            rcdata_contents = extract_all_rcdata(stream.read())
+            if rcdata_contents:
+                cfg = ExtractorModel(family=self.family)
+                for rcdata in rcdata_contents:
+                    if len(rcdata) > 1:
+                        key_length = rcdata[0]
+                        key = rcdata[1: 1 + key_length]
+                        encrypted_data = rcdata[1 + key_length:]
+                        decrypted_data = decrypt_rc4_data(encrypted_data, key)
+                        decoded_data = decrypted_data.decode("utf-8", "replace")
+                        printable = set(string.printable)  #
+                        filtered_data = list(filter(lambda x: x in printable, decoded_data))
+                        self.logger.info("Decrypted Config:", "".join(filtered_data))
+                        cfg.decoded_strings = filtered_data
+                return cfg
+            else:
+                self.logger.info("No RCDATA found")
+        except pefile.PEFormatError:
+            # Extractor expected a PE but didn't
+            return
 
 
 if __name__ == "__main__":

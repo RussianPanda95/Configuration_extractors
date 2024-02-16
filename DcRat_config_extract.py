@@ -18,6 +18,7 @@ from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import padding
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from dotnetfile import DotNetPE
+import pefile
 from maco.extractor import Extractor
 from maco.model import ConnUsageEnum, ExtractorModel
 
@@ -70,94 +71,98 @@ class DCRat(Extractor):
     )
 
     def run(self, stream: BinaryIO, matches: List = []) -> Optional[ExtractorModel]:
-        with NamedTemporaryFile() as file:
-            file.write(stream.read())
-            file.flush()
-
-            dotnet_file = DotNetPE(file.name)
-
-        us_stream_strings = dotnet_file.get_user_stream_strings()
-
-        key = None
-        for string in us_stream_strings:
-            if is_base64(string) and decode_and_check_length(string):
-                key = string
-                break
-
-        if key is None:
-            self.logger.info("No key found.")
-            return
-
-        cfg = ExtractorModel(family=self.family)
-        skip_bytes = 48
-
-        salt = "DcRatByqwqdanchun"  ## Salt value might be different
-
-        # Generate AES Keys from salt
-        key1 = get_aes_key(key, salt, 32)
-        key2 = get_aes_key(key, salt, 96)
-        key2 = key2[32:]
-
-        decrypted_strings = []
-
-        for string in us_stream_strings:
-            if is_base64(string) and string != key:
-                try:
-                    iv = get_IV(key2, string)
-                    decrypted_data = aes_decrypt_and_extract_data(string, key1, iv, skip_bytes)
-                    decrypted_strings.append(decrypted_data)
-                    cfg.encryption.append(cfg.Encryption(algorithm="AES", key=key1, iv=iv))
-                except ValueError as e:
-                    if "not a multiple of the block length" in str(e):
-                        continue
         try:
-            (
-                Ports,
-                Hosts,
-                Version,
-                Install,
-                MTX,
-                Certificate,
-                Server_signature,
-                Pastebin,
-                BSOD,
-                Group,
-                Anti_Process,
-                Anti,
-            ) = decrypted_strings
-        except ValueError as e:
-            self.logger.error(f"Error assigning variables: {e}")
-            cfg.decoded_strings = decrypted_strings
+            with NamedTemporaryFile() as file:
+                file.write(stream.read())
+                file.flush()
+
+                dotnet_file = DotNetPE(file.name)
+
+            us_stream_strings = dotnet_file.get_user_stream_strings()
+
+            key = None
+            for string in us_stream_strings:
+                if is_base64(string) and decode_and_check_length(string):
+                    key = string
+                    break
+
+            if key is None:
+                self.logger.info("No key found.")
+                return
+
+            cfg = ExtractorModel(family=self.family)
+            skip_bytes = 48
+
+            salt = "DcRatByqwqdanchun"  # Salt value might be different
+
+            # Generate AES Keys from salt
+            key1 = get_aes_key(key, salt, 32)
+            key2 = get_aes_key(key, salt, 96)
+            key2 = key2[32:]
+
+            decrypted_strings = []
+
+            for string in us_stream_strings:
+                if is_base64(string) and string != key:
+                    try:
+                        iv = get_IV(key2, string)
+                        decrypted_data = aes_decrypt_and_extract_data(string, key1, iv, skip_bytes)
+                        decrypted_strings.append(decrypted_data)
+                        cfg.encryption.append(cfg.Encryption(algorithm="AES", key=key1, iv=iv))
+                    except ValueError as e:
+                        if "not a multiple of the block length" in str(e):
+                            continue
+            try:
+                (
+                    Ports,
+                    Hosts,
+                    Version,
+                    Install,
+                    MTX,
+                    Certificate,
+                    Server_signature,
+                    Pastebin,
+                    BSOD,
+                    Group,
+                    Anti_Process,
+                    Anti,
+                ) = decrypted_strings
+            except ValueError as e:
+                self.logger.error(f"Error assigning variables: {e}")
+                cfg.decoded_strings = decrypted_strings
+                return cfg
+
+            # Variables can be different
+            self.logger.info(f"Ports: {Ports}")
+            self.logger.info(f"Hosts: {Hosts}")
+            self.logger.info(f"Version: {Version}")
+            self.logger.info(f"Install: {Install}")
+            self.logger.info(f"MTX: {MTX}")
+            self.logger.info(f"Certificate: {Certificate}")
+            self.logger.info(f"Server_signature: {Server_signature}")
+            self.logger.info(f"Pastebin: {Pastebin}")
+            self.logger.info(f"BSOD: {BSOD}")
+            self.logger.info(f"Group: {Group}")
+            self.logger.info(f"Anti_Process: {Anti_Process}")
+            self.logger.info(f"Anti: {Anti}")
+
+            cfg.http.append(cfg.Http(hostname=Hosts.decode(), port=Ports.decode(), usage=ConnUsageEnum.c2))
+            cfg.version = Version.decode()
+            cfg.mutex.append(MTX.decode())
+            cfg.campaign_id.append(Group.decode())
+            cfg.other = {
+                "Install": Install,
+                "Certificate": Certificate,
+                "Server_signature": Server_signature,
+                "Pastebin": Pastebin,
+                "BSOD": BSOD,
+                "Anti_process": Anti_Process,
+                "Anti": Anti,
+            }
             return cfg
-
-        # Variables can be different
-        self.logger.info(f"Ports: {Ports}")
-        self.logger.info(f"Hosts: {Hosts}")
-        self.logger.info(f"Version: {Version}")
-        self.logger.info(f"Install: {Install}")
-        self.logger.info(f"MTX: {MTX}")
-        self.logger.info(f"Certificate: {Certificate}")
-        self.logger.info(f"Server_signature: {Server_signature}")
-        self.logger.info(f"Pastebin: {Pastebin}")
-        self.logger.info(f"BSOD: {BSOD}")
-        self.logger.info(f"Group: {Group}")
-        self.logger.info(f"Anti_Process: {Anti_Process}")
-        self.logger.info(f"Anti: {Anti}")
-
-        cfg.http.append(cfg.Http(hostname=Hosts.decode(), port=Ports.decode(), usage=ConnUsageEnum.c2))
-        cfg.version = Version.decode()
-        cfg.mutex.append(MTX.decode())
-        cfg.campaign_id.append(Group.decode())
-        cfg.other = {
-            "Install": Install,
-            "Certificate": Certificate,
-            "Server_signature": Server_signature,
-            "Pastebin": Pastebin,
-            "BSOD": BSOD,
-            "Anti_process": Anti_Process,
-            "Anti": Anti,
-        }
-        return cfg
+        except pefile.PEFormatError:
+            # Extractor expected a PE but didn't
+            return
 
 
 if __name__ == "__main__":
