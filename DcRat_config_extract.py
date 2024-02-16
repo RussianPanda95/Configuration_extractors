@@ -17,7 +17,7 @@ from typing import BinaryIO, List, Optional
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import padding
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
-from dotnetfile import DotNetPE
+from dotnetfile import DotNetPE, CLRFormatError
 import pefile
 from maco.extractor import Extractor
 from maco.model import ConnUsageEnum, ExtractorModel
@@ -160,7 +160,7 @@ class DCRat(Extractor):
                 "Anti": Anti,
             }
             return cfg
-        except pefile.PEFormatError:
+        except (pefile.PEFormatError, CLRFormatError):
             # Extractor expected a PE but didn't
             return
 
