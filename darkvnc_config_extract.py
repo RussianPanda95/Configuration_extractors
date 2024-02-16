@@ -17,11 +17,16 @@
 # b8a9215b1d7e35698f757e20e1fc47bc
 # 1b7e8401b1b7176921050f46e01bf796
 
-import yara
+import sys
+from sys import argv
+from tempfile import NamedTemporaryFile
+from typing import BinaryIO, List, Optional
+
 import capstone
 import pefile
-import sys
-
+import yara
+from maco.extractor import Extractor
+from maco.model import ConnUsageEnum, ExtractorModel
 
 skip_rule = """
 rule skip_pattern {
@@ -52,11 +57,8 @@ def get_virtual_address_from_offset(pe, offset):
     return None
 
 
-def find_embedded_binaries(filename):
-    PE_signature = b'MZ'
-
-    with open(filename, 'rb') as f:
-        data = f.read()
+def find_embedded_binaries(data):
+    PE_signature = b"MZ"
 
     offset = 0
     while True:
@@ -84,50 +86,86 @@ def find_embedded_binaries(filename):
 
     return None
 
-def analyze_binary(data):
-    matches = analyze_rules.match(data=data)
-    pe = pefile.PE(data=data)
 
-    # Check if it's a 32-bit or 64-bit binary
-    mode = capstone.CS_MODE_32 if pe.FILE_HEADER.Machine == pefile.MACHINE_TYPE['IMAGE_FILE_MACHINE_I386'] else capstone.CS_MODE_64
-    disassembler = capstone.Cs(capstone.CS_ARCH_X86, mode)
-    disassembler.detail = True
+class DarkVNC(Extractor):
+    family = "DarkVNC"
+    author = "@RussianPanda"
+    last_modified = "2024-01-21"
+    sharing: str = "TLP:CLEAR"
+    yara_rule: str = """
+rule DarkVNC {
+	meta:
+		author = "RussianPanda"
+		description = "Detects DarkVNC"
+		date = "1/15/2024"
+		hash = "3c74dccd06605bcf527ffc27b3122959"
+	strings:
+		$s1 = {66 89 84 24 ?? 00 00 00 B8 ?? 00 00 00}
+		$s2 = {66 31 14 41 48}
+		$s3 = "VncStopServer"
+		$s4 = "VncStartServer"
+	condition:
+		uint16(0) == 0x5A4D and
+		3 of them and filesize < 700KB
+}
+"""
 
-    extracted_chars = []
-    key = None
+    def run(self, stream: BinaryIO, matches: List = []) -> Optional[ExtractorModel]:
+        data = stream.read()
+        matches = analyze_rules.match(data=data)
+        pe = pefile.PE(data=data)
 
-    for match in matches:
-        for string_data in match.strings:
-            offset = string_data[0]
-            virtual_address = get_virtual_address_from_offset(pe, offset)
+        # Check if it's a 32-bit or 64-bit binary
+        mode = (
+            capstone.CS_MODE_32
+            if pe.FILE_HEADER.Machine == pefile.MACHINE_TYPE["IMAGE_FILE_MACHINE_I386"]
+            else capstone.CS_MODE_64
+        )
+        disassembler = capstone.Cs(capstone.CS_ARCH_X86, mode)
+        disassembler.detail = True
 
-            instructions_count = 0
-            for i in disassembler.disasm(data[offset:offset + 1000], virtual_address):
-                if instructions_count >= 55:
-                    break
+        extracted_chars = []
+        key = None
 
-                if i.mnemonic == "mov":
-                    if i.op_str.startswith("eax, "):
-                        char_value = chr(int(i.op_str.split(", ")[1], 16))
-                        extracted_chars.append(char_value)
-                    elif i.op_str.startswith("dl, "):
-                        key = chr(int(i.op_str.split(", ")[1], 16))
+        for match in matches:
+            for string_data in match.strings:
+                offset = string_data[0]
+                virtual_address = get_virtual_address_from_offset(pe, offset)
 
-                #print(f"0x{i.address:X}:\t{i.mnemonic}\t{i.op_str}")
-                instructions_count += 1
+                instructions_count = 0
+                for i in disassembler.disasm(data[offset : offset + 1000], virtual_address):
+                    if instructions_count >= 55:
+                        break
 
-    encoded_str = ''.join(extracted_chars)
-    decrypted_string = ''.join([chr(ord(char) ^ ord(key)) for char in encoded_str])
-    cleaned_string = ''.join([char for char in decrypted_string if char.isdigit() or char == "." or char == ":"])
-    print(f"C2: {cleaned_string}")
+                    if i.mnemonic == "mov":
+                        if i.op_str.startswith("eax, "):
+                            char_value = chr(int(i.op_str.split(", ")[1], 16))
+                            extracted_chars.append(char_value)
+                        elif i.op_str.startswith("dl, "):
+                            key = chr(int(i.op_str.split(", ")[1], 16))
+
+                    # print(f"0x{i.address:X}:\t{i.mnemonic}\t{i.op_str}")
+                    instructions_count += 1
+
+        encoded_str = "".join(extracted_chars)
+        decrypted_string = "".join([chr(ord(char) ^ ord(key)) for char in encoded_str])
+        cleaned_string = "".join([char for char in decrypted_string if char.isdigit() or char == "." or char == ":"])
+        ip, port = cleaned_string.rsplit(":", 1)
+        cfg = ExtractorModel(
+            family=self.family,
+            tcp=[ExtractorModel.Connection(server_ip=ip, server_port=int(port), usage=ConnUsageEnum.c2)],
+        )
+        self.logger.info(f"C2: {cleaned_string}")
+        return cfg
+
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print("Usage: python3 darkvnc_config_extract.py <filename>")
-        sys.exit(1)
+    parser = DarkVNC()
+    file_path = argv[1]
 
-    binary_data = find_embedded_binaries(sys.argv[1])  
-    if binary_data:
-        analyze_binary(binary_data)
-    else:
-        print("No binary with the specified pattern found")
+    with open(file_path, "rb") as f:
+        result = parser.run(f)
+        if result:
+            print(result.model_dump_json(indent=2, exclude_none=True, exclude_defaults=True))
+        else:
+            print("No configuration extracted")
