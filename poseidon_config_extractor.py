@@ -52,7 +52,7 @@ def extract_data_to_json(readable_output):
 
     c2_match = re.search(r'http[s]?://\S+', readable_output)
     if c2_match:
-        data["C2"] = c2_match.group(0)
+        data["C2"] = c2_match.group(0).rstrip(')")')
 
     staging_folder_match = re.search(r'--data-binary\s+@\S+', readable_output)
     if staging_folder_match:
