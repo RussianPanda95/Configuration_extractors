@@ -1,3 +1,6 @@
+# Author: RussianPanda
+# Sample: 6daeba71fa6e6f1b8e47ba44b221989d03f34aeda203c4f624ef9ef553a3d038
+
 import re
 import base64
 import argparse
