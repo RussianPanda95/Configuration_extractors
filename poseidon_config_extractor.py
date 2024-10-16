@@ -5,6 +5,10 @@ import sys
 import json
 import hashlib
 
+from maco.extractor import Extractor
+from maco.model import ConnUsageEnum, ExtractorModel
+from typing import BinaryIO, List, Optional
+
 printed_configs = set()
 
 def custom_base64_decode(encrypted_data, custom_alphabet):
@@ -87,48 +91,84 @@ def process_config_data(readable_output):
             print("Config:", json_output)
             printed_configs.add(json_output)
 
-if len(sys.argv) < 2:
-    print("Usage: python poseidon_config_extractor.py <file_path>")
-    sys.exit(1)
+class PoseidonStealer(Extractor):
+    family = "Poseidon Stealer"
+    author = "@RussianPanda"
+    last_modified = "2024-10-16"
+    sharing: str = "TLP:CLEAR"
+    reference: str = "https://www.esentire.com/blog/poseidon-stealer-uses-sora-ai-lure-to-infect-macos"
 
-file_path = sys.argv[1]
+    def run(self, stream: BinaryIO, matches: List = []) -> Optional[ExtractorModel]:
+        # Reset printed_configs per each run to prevent config leaks onto other samples
+        global printed_configs
+        printed_configs = set()
 
-with open(file_path, "rb") as binary_file:
-    file_data = binary_file.read()
-    sha256_hash = hashlib.sha256(file_data).hexdigest()
-    print(f"SHA-256: {sha256_hash}")
+        file_data = stream.read()
+        sha256_hash = hashlib.sha256(file_data).hexdigest()
+        self.logger.info(f"SHA-256: {sha256_hash}")
 
-custom_alphabet_pattern = rb'[A-Za-z0-9+/=]{64}'
 
-match = re.search(custom_alphabet_pattern, file_data)
+        custom_alphabet_pattern = rb'[A-Za-z0-9+/=]{64}'
 
-if match:
-    custom_alphabet = match.group().decode('utf-8', errors='ignore')
-    start_pos = match.start()
+        match = re.search(custom_alphabet_pattern, file_data)
 
-    initial_offsets = 0x87
-    enc_data_start = start_pos + len(custom_alphabet) + initial_offsets
-    valid_start = find_valid_start(file_data, enc_data_start)
+        if match:
+            custom_alphabet = match.group().decode('utf-8', errors='ignore')
+            start_pos = match.start()
 
-    if valid_start is not None and valid_start < len(file_data):
-        null_byte_pos = file_data.find(b'\x00', valid_start)
-        enc_data = file_data[valid_start:null_byte_pos] if null_byte_pos != -1 else file_data[valid_start:]
+            initial_offsets = 0x87
+            enc_data_start = start_pos + len(custom_alphabet) + initial_offsets
+            valid_start = find_valid_start(file_data, enc_data_start)
 
-        decoded_bytes = custom_base64_decode(enc_data.decode('utf-8', errors='ignore'), custom_alphabet)
-        transformed_data = transform_decoded_data(decoded_bytes, 39294)
-        readable_output = convert_hex_to_ascii(transformed_data)
+            if valid_start is not None and valid_start < len(file_data):
+                null_byte_pos = file_data.find(b'\x00', valid_start)
+                enc_data = file_data[valid_start:null_byte_pos] if null_byte_pos != -1 else file_data[valid_start:]
 
-        if "osascript" in readable_output:
-            process_config_data(readable_output)
+                decoded_bytes = custom_base64_decode(enc_data.decode('utf-8', errors='ignore'), custom_alphabet)
+                transformed_data = transform_decoded_data(decoded_bytes, 39294)
+                readable_output = convert_hex_to_ascii(transformed_data)
 
-    # Trying to extract the hex string if no valid config has been found
-    if not printed_configs:
-        long_hex_pattern = rb'\x00{2,}[0-9a-fA-F]{430,}'
-        long_hex_match = re.search(long_hex_pattern, file_data)
-        if long_hex_match:
-            long_hex_data = long_hex_match.group().lstrip(b'\x00')
+                if "osascript" in readable_output:
+                    process_config_data(readable_output)
 
-            readable_output = convert_hex_to_readable_string(long_hex_data.decode('ascii'))
-            process_config_data(readable_output)
-else:
-    print("No custom alphabet found.")
+            # Trying to extract the hex string if no valid config has been found
+            if not printed_configs:
+                long_hex_pattern = rb'\x00{2,}[0-9a-fA-F]{430,}'
+                long_hex_match = re.search(long_hex_pattern, file_data)
+                if long_hex_match:
+                    long_hex_data = long_hex_match.group().lstrip(b'\x00')
+
+                    readable_output = convert_hex_to_readable_string(long_hex_data.decode('ascii'))
+                    process_config_data(readable_output)
+
+
+            # Parse printed configs into MACO format
+            if printed_configs:
+                cfg = ExtractorModel(family=self.family)
+                for config in printed_configs:
+                    config = json.loads(config)
+                    for k, v in config.items():
+                        if k == "buildid":
+                            cfg.version = v
+                        elif k == "C2":
+                            cfg.http.append(cfg.Http(uri=v, usage=ConnUsageEnum.c2))
+                        elif k == 'staging_folder':
+                            cfg.paths.append(cfg.Path(path=v, usage="other"))
+                        else:
+                            # Other keys seem to elude to identifiers
+                            cfg.identifier.append(v)
+                return cfg
+
+        else:
+            self.logger.warning("No custom alphabet found.")
+
+if __name__ == "__main__":
+    parser = PoseidonStealer()
+    file_path = sys.argv[1]
+
+    with open(file_path, "rb") as f:
+        result = parser.run(f)
+        if result:
+            print(result.model_dump_json(indent=2, exclude_none=True, exclude_defaults=True))
+        else:
+            print("No configuration extracted")
