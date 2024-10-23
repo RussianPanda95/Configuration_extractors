@@ -69,6 +69,29 @@ class DCRat(Extractor):
     reference: str = (
         "https://www.esentire.com/blog/onlydcratfans-malware-distributed-using-explicit-lures-of-onlyfans-pages-and-other-adult-content"
     )
+    yara_rule = """
+rule DcRat_RAT_Windows : RAT NET {
+  meta:
+    author      = "@_lubiedo"
+    date        = "26-05-2022"
+    description = "DcRat by qwqdanchun"
+    hash0       = "4530c2681887c0748cc2ecddb1976d15ad813a4a01e5810fd8b843adcd2fd3d0"
+    ref0        = "https://github.com/qwqdanchun/DcRat"
+  strings:
+    $magic  = { 4D 5A }
+    $s01    = "/c schtasks /create /f /sc onlogon /rl highest /tn " base64wide
+    $s02    = "Select * from Win32_CacheMemory" wide fullword
+    $s03    = "SOFTWARE\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\Run\\\\" base64wide
+    $s04    = "timeout 3 > NUL" wide fullword
+    $s05    = "Pac_ket" wide fullword
+    $s06    = "Po_ng" wide fullword
+    $s07    = "plu_gin" wide fullword
+    $s08    = "AmsiScanBuffer" base64wide
+    $s09    = "MsMpEng.exe" wide fullword
+  condition:
+    filesize < 1MB and $magic and all of ($s*)
+}
+"""
 
     def run(self, stream: BinaryIO, matches: List = []) -> Optional[ExtractorModel]:
         try:
@@ -151,13 +174,13 @@ class DCRat(Extractor):
             cfg.mutex.append(MTX.decode())
             cfg.campaign_id.append(Group.decode())
             cfg.other = {
-                "Install": Install,
-                "Certificate": Certificate,
-                "Server_signature": Server_signature,
-                "Pastebin": Pastebin,
-                "BSOD": BSOD,
-                "Anti_process": Anti_Process,
-                "Anti": Anti,
+                "Install": Install == b'true',
+                "Certificate": Certificate.decode(),
+                "Server_signature": Server_signature.decode(),
+                "Pastebin": str(Pastebin) if Pastebin != b'null' else None,
+                "BSOD": BSOD == b'true',
+                "Anti_process": Anti_Process == b'true',
+                "Anti": Anti == b'true',
             }
             return cfg
         except (pefile.PEFormatError, CLRFormatError):

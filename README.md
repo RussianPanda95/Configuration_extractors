@@ -6,7 +6,7 @@ Unless otherwise indicated, the samples mentioned can be found in MalwareBazaar 
 
 The configuration extractor was tested on the following samples:
 
-_a2766b20b3d09b2eee3a9805cffef7228dc2eab1265a6fbc1e98f67105ae51b9 da642fc983f09b106c32181f7e66d0cad426924650594ca613e5ce5b25b71493_
+_a2766b20b3d09b2eee3a9805cffef7228dc2eab1265a6fbc1e98f67105ae51b9 da642fc983f09b106c32181f7e66d0cad426924650594ca613e5ce5b25b71493 4530c2681887c0748cc2ecddb1976d15ad813a4a01e5810fd8b843adcd2fd3d0_
 
 #### DynamicRAT:
 
@@ -25,6 +25,10 @@ fd37c98782453214bab6484f6045b796a5a3dc7ebba9a894f6783817eef6c9c7
 dd651c2ffe94faf59e3a3db2da56e05a1a12fcae7cd5f87881d1cb036be3ec2a 59b1721e3c3a42079673bebeb36e8c47dad88e93bdebcd6bb1468c4ca1235732_
 
 All samples can be found on https://www.unpac.me/
+
+#### LummaStealer:
+The configuration extractor was tested on the following samples:
+_988f54f9694dd1ae701bacec3b83c752_
 
 #### MetaStealer:
 
