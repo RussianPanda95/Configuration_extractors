@@ -35,6 +35,11 @@ _988f54f9694dd1ae701bacec3b83c752_
 The configuration extractor was tested on the following samples:
 _5f690cddc7610b8d4aeb85b82979f326373674f9f4032ee214a65758f4e479be_
 
+#### QuesarRAT:
+The configuration extractor was tested on the following samples:
+
+_1e7d39f39a804c0c1c3ebbcb7f5b0009bee68ee3c1b9ed396ac6c0098c2dc60b_
+
 #### RemcosRAT:
 
 The configuration extractor was tested on the following samples:

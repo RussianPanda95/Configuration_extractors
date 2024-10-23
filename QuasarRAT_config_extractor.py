@@ -148,7 +148,8 @@ rule QuasarRAT_2 {
                 del value_strings[2]
 
             config_dict = {"Key": key_s, "EncryptionKey": encryption_key, "Authkey": authkey}
-            config_dict.update({B64_VALUES[i]: value_string for i, value_string in enumerate(value_strings)})
+            config_dict.update({B64_VALUES[i]: value_string for i, value_string in enumerate(value_strings) \
+                                if i < len(B64_VALUES)})
             [self.logger.info(f"{k}: {v}") for k, v in config_dict.items()]
 
             cfg = ExtractorModel(family=self.family)
