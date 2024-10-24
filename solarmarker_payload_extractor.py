@@ -23,24 +23,6 @@ class SolarMarker(Extractor):
     reference: str = "https://www.esentire.com/blog/esentire-threat-intelligence-malware-analysis-solarmarker"
     yara_rule: str = """
 import "pe"
-rule  SolarMarker_backdoor {
-    meta:
-        author = "eSentire TI"
-        date = "04/13/2022"
-        version = "1.0"
-    strings:
-        $string1 = "ezkabsr" wide fullword nocase
-        $string3 = "deimos.dll" wide fullword nocase
-        $string4 = "solarmarker.dat" wide fullword nocase
-        $string5 = "dzkabr" wide fullword nocase
-        $string6 = "Invoke"
-        $string7 = "set_UseShellExecute"
-    condition:
-        2 of ($string*) and
-        (uint16(0) == 0x5A4D or uint32(0) == 0x4464c457f)
-}
-
-import "pe"
 rule  SolarMarker_payload {
     meta:
         author = "eSentire TI"
