@@ -15,7 +15,6 @@
 #include <iostream>
 #include <shellapi.h>
 #pragma comment(lib, "shell32.lib")
-#include <capstone/capstone.h>
 
 #define ROTL32(v, n) ((v << n) | (v >> (32 - n)))
 
@@ -166,7 +165,7 @@ void read_target_location(const uint8_t* data, size_t file_size, uint32_t value,
     printf("\n");
 }
 
-void disassemble_instructions(const uint8_t* data, size_t offset, const SectionInfo* section, const uint8_t* key, const uint8_t* nonce) {
+void analyze_encrypted_chunks(const uint8_t* data, size_t offset, const SectionInfo* section, const uint8_t* key, const uint8_t* nonce) {
     // Skip 0x29 bytes after pattern
     size_t target_offset = offset + 0x29;
 
@@ -193,7 +192,7 @@ void disassemble_instructions(const uint8_t* data, size_t offset, const SectionI
     printf("\n----------------------------------------\n");
 }
 
-void disassemble_around_pattern(const char* filename) {
+void analyze_pattern_location(const char* filename) {
     FILE* file = fopen(filename, "rb");
     if (!file) {
         printf("Failed to open file\n");
@@ -294,7 +293,7 @@ void disassemble_around_pattern(const char* filename) {
             size_t array_start = i - 36;  // Go back 9 DWORDs
 
             // Show disassembly around pattern
-            disassemble_instructions(data, array_start, current_section, nullptr, nullptr);
+            analyze_encrypted_chunks(data, array_start, current_section, nullptr, nullptr);
 
             break;
         }
