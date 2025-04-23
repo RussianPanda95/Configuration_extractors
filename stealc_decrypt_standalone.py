@@ -1,5 +1,6 @@
 # Author: RussianPanda
 # Sample: 911981d657b02f2079375eecbd81f3d83e5fa2b8de73afad21783004cbcc512d
+
 import re
 import base64
 import argparse
@@ -34,17 +35,14 @@ def rc4_decrypt(data, key):
     
     if isinstance(data, str):
         try:
-            # Try to convert from hex string
             data = bytes.fromhex(data)
         except:
-            # If not hex, use as-is
             data = data.encode('utf-8')
     
     S = rc4_ksa(key)
     return rc4_prga(S, data)
 
 def find_and_decrypt_strings(binary_data, rc4_key):
-
     printable_pattern = rb'(?:[\x20-\x7E]{4,})'
     
     base64_pattern = re.compile(b'[A-Za-z0-9+/=]{4,}')
@@ -134,7 +132,6 @@ def is_valid_string(s, min_length=4):
     return False
 
 def find_opcode(binary_data):
-
     opcode = bytes.fromhex("73 74 72 69 6E 67 20 74 6F 6F 20 6C 6F 6E 67")
     
     positions = []
@@ -147,38 +144,71 @@ def find_opcode(binary_data):
     if positions:
         build_id = None
         rc4_key = None
+        rc4_traffic = None
         
         for pos in positions:
-            next_bytes = binary_data[pos + len(opcode):pos + len(opcode) + 120]
-            
+            next_bytes = binary_data[pos + len(opcode):pos + len(opcode) + 200]
             
             current_str = ""
+            build_id_end = 0
             for i, b in enumerate(next_bytes):
                 if 32 <= b <= 126:
                     current_str += chr(b)
                 elif current_str:
-                    build_id = current_str
+                    build_id = current_str.strip()  # Strip spaces from the build ID
+                    build_id_end = i
                     break
             
+            if not build_id:
+                continue
+                
             string_count = 0
             current_str = ""
-            for b in next_bytes:
+            for i, b in enumerate(next_bytes[build_id_end:]):
                 if 32 <= b <= 126:
                     current_str += chr(b)
-                else:
-                    if current_str:
-                        string_count += 1
-                        if string_count == 3:
-                            rc4_key = current_str
-                            break
-                        current_str = ""
+                elif current_str:
+                    string_count += 1
+                    if string_count == 2:
+                        rc4_key = current_str
+                        break
+                    current_str = ""
             
-            if build_id and rc4_key:
+            zeroes_start = None
+            zeroes_count = 0
+            for i in range(build_id_end, len(next_bytes)):
+                if next_bytes[i] == 0:
+                    if zeroes_start is None:
+                        zeroes_start = i
+                    zeroes_count += 1
+                    if zeroes_count >= 5:
+                        break
+                else:
+                    zeroes_start = None
+                    zeroes_count = 0
+            
+            if zeroes_start and zeroes_count >= 5:
+                traffic_start = zeroes_start + zeroes_count
+                if traffic_start < len(next_bytes):
+                    traffic_bytes = []
+                    for i in range(traffic_start, len(next_bytes)):
+                        if next_bytes[i] == 0:
+                            break
+                        traffic_bytes.append(next_bytes[i])
+                    
+                    if traffic_bytes:
+                        try:
+                            rc4_traffic = bytes(traffic_bytes).decode('ascii', errors='replace')
+                        except:
+                            rc4_traffic = ''.join(chr(b) if 32 <= b <= 126 else f'\\x{b:02x}' for b in traffic_bytes)
+            
+            if build_id and rc4_key and rc4_traffic:
                 break
         
         return {
             "build_id": build_id,
-            "rc4_key": rc4_key
+            "rc4_key": rc4_key,
+            "rc4_traffic": rc4_traffic
         }
     else:
         return None
@@ -213,6 +243,7 @@ def main():
     parser = argparse.ArgumentParser(description='Find and decrypt strings in binary files')
     parser.add_argument('file', help='Binary file to analyze')
     parser.add_argument('--min-length', type=int, default=4, help='Minimum length for decrypted strings (default: 4)')
+    parser.add_argument('--key', help='Specify RC4 key manually (optional)')
     args = parser.parse_args()
     
     try:
@@ -224,7 +255,18 @@ def main():
     
     detected_info = find_opcode(binary_data)
     
-    rc4_key = detected_info["rc4_key"] if detected_info and detected_info["rc4_key"] else args.key
+    rc4_key = None
+    if detected_info and detected_info["rc4_key"]:
+        rc4_key = detected_info["rc4_key"]
+        print(f"[+] Detected RC4 key: {rc4_key}")
+        if detected_info["rc4_traffic"]:
+            print(f"[+] Detected RC4 traffic key: {detected_info['rc4_traffic']}")
+    elif hasattr(args, 'key') and args.key:
+        rc4_key = args.key
+        print(f"[+] Using provided RC4 key: {rc4_key}")
+    else:
+        print("[-] No RC4 key detected or provided. Cannot decrypt.")
+        return
     
     results = find_and_decrypt_strings(binary_data, rc4_key)
     
@@ -256,6 +298,7 @@ def main():
         "metadata": {
             "build_id": detected_info["build_id"] if detected_info else None,
             "rc4_key": rc4_key,
+            "rc4_traffic": detected_info["rc4_traffic"] if detected_info else None,
             "c2": c2_url
         },
         "decrypted_strings": unique_decrypted
